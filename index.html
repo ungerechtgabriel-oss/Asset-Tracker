@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
 
-    <title>Asset Tracker v15</title>
+    <title>Asset Tracker v16</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -19,6 +19,7 @@
             --text-muted: #8e8e93;
             --accent: #0a84ff;
             --green: #30d158;
+            --gold: #ffd700;
             --red: #ff453a;
             --orange: #ff9f0a;
             --purple: #bf5af2;
@@ -166,6 +167,7 @@
         .badge-crypto { background: rgba(48, 209, 88, 0.2); color: var(--green); }
         .badge-stock { background: rgba(10, 132, 255, 0.2); color: var(--accent); }
         .badge-manual { background: rgba(191, 90, 242, 0.2); color: var(--purple); }
+        .badge-commo { background: rgba(255, 215, 0, 0.2); color: var(--gold); }
 
         .asset-val { font-size: 1.1rem; font-weight: 600; transition: filter 0.3s; }
         .asset-sub { font-size: 0.85rem; color: var(--text-muted); }
@@ -226,7 +228,7 @@
     </div>
 
     <div class="input-group">
-        <input type="text" id="searchInput" class="main-input" placeholder="Suche (z.B. Apple, Bitcoin)...">
+        <input type="text" id="searchInput" class="main-input" placeholder="Suche (z.B. Gold, Apple)...">
         <button class="control-btn add-btn" onclick="autoSearch()">+</button>
         <button class="control-btn manual-btn" onclick="manualAdd()">✎</button>
     </div>
@@ -241,9 +243,18 @@
     let stealth = localStorage.getItem('stealthMode') === 'true';
     let prices = {};
 
-    // SICHERHEITS-LISTEN
+    // DATENBANKEN
     const KNOWN_STOCKS = ['apple', 'tesla', 'microsoft', 'amazon', 'google', 'meta', 'netflix', 'nvidia', 'aapl', 'tsla', 'msft', 'amzn', 'googl', 'fb', 'nflx', 'nvda'];
     const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple'];
+    
+    // ROHSTOFF MAPPING (Name -> API-ID für Spot-Preis Tracking)
+    const COMMODITIES = {
+        'gold': 'pax-gold',
+        'silber': 'kinesis-silver',
+        'silver': 'kinesis-silver',
+        'öl': 'tether-oil',
+        'oil': 'tether-oil'
+    };
 
     const els = {
         list: document.getElementById('list'),
@@ -263,7 +274,7 @@
         els.input.addEventListener("keypress", (e) => { if (e.key === "Enter") autoSearch(); });
     });
 
-    // --- SMART SEARCH (STRICT MODE) ---
+    // --- SMART SEARCH V16 ---
     async function autoSearch() {
         const q = els.input.value.trim().toLowerCase();
         if(!q) return;
@@ -271,37 +282,34 @@
         showLoading(true, `Suche "${q}"...`);
         let found = false;
 
-        // 1. IST ES EINE BEKANNTE AKTIE? (Apple, Tesla...)
-        if (KNOWN_STOCKS.includes(q)) {
-            if(!apiKey) {
-                alert(`Für Aktien wie "${q}" brauchst du den API Key! Klicke oben auf ⚙️.`);
-                showLoading(false);
-                return; 
-            }
-            // Zwinge Aktiensuche, verbiete Krypto
-            found = await checkStock(q);
-            if (!found) alert(`Konnte Aktie "${q}" nicht laden. API-Key prüfen!`);
+        // 1. ROHSTOFF CHECK
+        if (COMMODITIES[q]) {
+            addAsset(q, 'commodity'); // Speichert den Namen (z.B. "gold")
+            found = true;
         
-        // 2. IST ES EINE BEKANNTE KRYPTO? (BTC, ETH...)
+        // 2. BEKANNTE AKTIEN
+        } else if (KNOWN_STOCKS.includes(q)) {
+            if(!apiKey) { alert('API Key fehlt für Aktien!'); showLoading(false); return; }
+            found = await checkStock(q);
+        
+        // 3. BEKANNTE KRYPTO
         } else if (KNOWN_CRYPTO.includes(q)) {
             found = await checkCrypto(q);
         
-        // 3. SONSTIGES (Unbekannt -> Versuche beides)
+        // 4. FALLBACK (Erst Aktie, dann Krypto)
         } else {
-            // Erst Aktie (wenn Key da)
             if (apiKey) found = await checkStock(q);
-            // Dann Krypto
             if (!found) found = await checkCrypto(q);
         }
 
-        if(!found && !KNOWN_STOCKS.includes(q)) {
+        if(!found) {
             setTimeout(() => {
                 if(confirm(`"${els.input.value}" nicht gefunden. Manuell anlegen?`)) {
                     manualAdd(els.input.value);
                 }
             }, 100);
         } else {
-            if(found) els.input.value = '';
+            els.input.value = '';
         }
         showLoading(false);
     }
@@ -320,23 +328,18 @@
 
     async function checkStock(query) {
         try {
-            // A) Symbol direkt
             const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${query.toUpperCase()}&token=${apiKey}`);
             const quoteData = await quoteRes.json();
             if(quoteData && quoteData.c > 0) {
                 addAsset(query.toUpperCase(), 'stock');
                 return true;
             }
-
-            // B) Suche
             const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${apiKey}`);
             const searchData = await searchRes.json();
-            
             if(searchData.result && searchData.result.length > 0) {
                 const symbol = searchData.result[0].symbol;
                 const checkRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`);
                 const checkData = await checkRes.json();
-                
                 if(checkData.c > 0) {
                     addAsset(symbol, 'stock');
                     alert(`Gefunden: ${searchData.result[0].description} (${symbol})`);
@@ -361,6 +364,8 @@
     }
 
     function addAsset(id, type, amount = 0, manualPrice = 0) {
+        // Falls "Gold" schon als Aktie drin war -> Warnung oder Logik anpassen. 
+        // Einfachheitshalber: ID Check.
         if(assets.find(a => a.id === id)) { alert('Bereits in der Liste.'); return; }
         assets.push({ id, type, amount, manualPrice, active: true });
         save(); refreshPrices();
@@ -368,6 +373,8 @@
 
     async function refreshPrices() {
         if(assets.length === 0) { render(); return; }
+        
+        // A) Krypto Batch
         const cryptoIds = assets.filter(a => a.type === 'crypto').map(a => a.id).join(',');
         if(cryptoIds) {
             try {
@@ -376,6 +383,24 @@
                 for(let id in data) prices[id] = data[id].usd;
             } catch(e) {}
         }
+
+        // B) Commodities (Holen Preise via spezielle Krypto-Token die Spot-Preis tracken)
+        const commoAssets = assets.filter(a => a.type === 'commodity');
+        if(commoAssets.length > 0) {
+            // Wir bauen eine Liste der Mapping-IDs (z.B. pax-gold für gold)
+            const mapIds = commoAssets.map(a => COMMODITIES[a.id]).join(',');
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${mapIds}&vs_currencies=usd`);
+                const data = await res.json();
+                // Zurück-Mappen: API-Result (pax-gold) auf Asset-ID (gold) übertragen
+                commoAssets.forEach(a => {
+                    const apiId = COMMODITIES[a.id];
+                    if(data[apiId]) prices[a.id] = data[apiId].usd;
+                });
+            } catch(e) {}
+        }
+
+        // C) Stocks
         const stocks = assets.filter(a => a.type === 'stock');
         if(stocks.length > 0 && apiKey) {
             for(let stock of stocks) {
@@ -399,3 +424,18 @@
             const val = asset.amount * price;
             const isActive = (asset.active !== false);
             if (isActive) total += val;
+            
+            const badgeMap = { 'crypto': 'Krypto', 'stock': 'Aktie', 'manual': 'Manuell', 'commodity': 'Rohstoff' };
+            const badgeClass = { 'crypto': 'badge-crypto', 'stock': 'badge-stock', 'manual': 'badge-manual', 'commodity': 'badge-commo' };
+            const opacityClass = isActive ? '' : 'inactive';
+            const checkedState = isActive ? 'checked' : '';
+            const inputHtml = stealth ? `<span class="blur-value">HIDDEN</span>` : `<input type="number" class="small-input" value="${asset.amount}" onchange="updateAsset(${idx}, 'amount', this.value)">`;
+            const manualPriceHtml = (!stealth && asset.type === 'manual') ? `<input type="number" class="small-input" value="${asset.manualPrice}" onchange="updateAsset(${idx}, 'price', this.value)" placeholder="$">` : '';
+
+            // ID für Anzeige etwas schöner machen (erster Buchstabe Groß)
+            const displayName = asset.id.charAt(0).toUpperCase() + asset.id.slice(1);
+
+            const html = `
+                <div class="asset-card ${opacityClass}">
+                    <div class="row">
+                        <div class
