@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
 
-    <title>Asset Tracker v33</title>
+    <title>Asset Tracker v34 (Stable)</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -37,12 +37,18 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* Notfall-Anzeige */
+        #error-log {
+            display: none; color: #ff453a; font-family: monospace; font-size: 0.8rem; text-align: center; margin-bottom: 20px; border: 1px solid #ff453a; padding: 10px; border-radius: 8px;
+        }
+
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             padding-top: 10px;
+            position: relative; z-index: 2;
         }
 
         .total-container { flex: 1; }
@@ -56,9 +62,10 @@
             display: flex; align-items: center; justify-content: center;
         }
 
+        /* Z-Index Fix: Settings immer über allem */
         #settingsPanel {
             background: #2c2c2e; padding: 20px; border-radius: 16px; margin-bottom: 25px;
-            display: none; border: 1px solid #444;
+            display: none; border: 1px solid #444; position: relative; z-index: 9999;
         }
 
         .settings-section { margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 20px; }
@@ -141,6 +148,8 @@
 </head>
 <body>
 
+    <div id="error-log"></div>
+
     <header>
         <div class="total-container" onclick="toggleStealth()">
             <div style="font-size: 0.8rem; color: #888; font-weight: 600;">
@@ -187,21 +196,30 @@
     <div id="loading" class="loading">Lade Daten...</div>
     <div id="list"></div>
 
+    <script>
+        window.onerror = function(msg, url, line) {
+            const log = document.getElementById('error-log');
+            log.style.display = 'block';
+            log.innerText = "Fehler: " + msg + " (Z" + line + ")";
+            return false;
+        };
+    </script>
+
 <script>
     // --- STATE ---
-    let assets = JSON.parse(localStorage.getItem('ultimateAssets')) || [];
-    let apiKey = localStorage.getItem('finnhubKey') || '';
-    let stealth = localStorage.getItem('stealthMode') === 'true';
-    let currency = localStorage.getItem('appCurrency') || 'USD'; 
+    let assets = [];
+    let apiKey = '';
+    let stealth = false;
+    let currency = 'USD';
     let prices = {};
     let conversionRate = 1;
+    let isUpdating = false; // Schutz gegen doppeltes Laden
 
     // --- DATENBANKEN ---
     const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple', 'polkadot', 'link', 'xlm'];
     const COMMODITIES = { 'gold': 'pax-gold', 'silber': 'kinesis-silver', 'silver': 'kinesis-silver', 'öl': 'tether-oil', 'oil': 'tether-oil' };
 
-    // --- NAMENS-VEREDELUNG (Anzeige in der Liste) ---
-    // Wenn das Ticker-Symbol (links) gefunden wird, zeige den schönen Namen (rechts)
+    // Namen verschönern
     const TICKER_NAMES = {
         'URTH': 'iShares MSCI World',
         'VT': 'Vanguard All-World',
@@ -258,37 +276,14 @@
         'DBK.DE': 'Deutsche Bank',
     };
 
-    // --- SUCHE MAPPING (Eingabe -> Ticker & Typ) ---
     const WKN_MAP = {
-        // ETFs
-        'msci world': { s: 'URTH', t: 'etf', n: 'iShares MSCI World' }, 
-        'a0rpwh': { s: 'URTH', t: 'etf', n: 'iShares MSCI World' }, 
-        'all world': { s: 'VT', t: 'etf', n: 'Vanguard All-World' }, 
-        'a1jx52': { s: 'VT', t: 'etf', n: 'Vanguard All-World' }, 
-        'nasdaq 100': { s: 'QQQ', t: 'etf', n: 'Invesco Nasdaq 100' }, 
-        'qqq': { s: 'QQQ', t: 'etf', n: 'Invesco Nasdaq 100' }, 
-        's&p 500': { s: 'IVV', t: 'etf', n: 'iShares S&P 500' },
-        'dax': { s: 'DAX', t: 'etf', n: 'Global X DAX' },
-        'emerging markets': { s: 'IEMG', t: 'etf', n: 'iShares Emerging Mkts' },
-        'clean energy': { s: 'ICLN', t: 'etf', n: 'iShares Clean Energy' },
-        'automation': { s: 'ROBO', t: 'etf', n: 'Robo Global Robotics' },
-        'cyber security': { s: 'CIBR', t: 'etf', n: 'First Trust CyberSec' },
-        'gold etf': { s: 'GLD', t: 'etf', n: 'SPDR Gold Shares' },
-        
-        // FIRMEN (Unterscheidung zum Index)
-        'nasdaq inc': { s: 'NDAQ', t: 'stock', n: 'Nasdaq Inc.' },
-        'ndaq': { s: 'NDAQ', t: 'stock', n: 'Nasdaq Inc.' },
-        'blackrock': { s: 'BLK', t: 'stock', n: 'BlackRock Inc.' },
-        'coinbase': { s: 'COIN', t: 'stock', n: 'Coinbase Global' },
-        
-        // TECH
-        'apple': { s: 'AAPL', t: 'stock', n: 'Apple Inc.' },
-        '865985': { s: 'AAPL', t: 'stock', n: 'Apple Inc.' },
-        'tesla': { s: 'TSLA', t: 'stock', n: 'Tesla Inc.' },
-        'nvidia': { s: 'NVDA', t: 'stock', n: 'NVIDIA Corp.' },
-        'microsoft': { s: 'MSFT', t: 'stock', n: 'Microsoft Corp.' },
-        'amazon': { s: 'AMZN', t: 'stock', n: 'Amazon.com' },
-        'google': { s: 'GOOGL', t: 'stock', n: 'Alphabet Inc. A' },
+        'msci world': { s: 'URTH', t: 'etf' }, 'a0rpwh': { s: 'URTH', t: 'etf' }, 'all world': { s: 'VT', t: 'etf' }, 'a1jx52': { s: 'VT', t: 'etf' },
+        'nasdaq 100': { s: 'QQQ', t: 'etf' }, 'qqq': { s: 'QQQ', t: 'etf' }, 's&p 500': { s: 'IVV', t: 'etf' },
+        'dax': { s: 'DAX', t: 'etf' }, 'emerging markets': { s: 'IEMG', t: 'etf' }, 'clean energy': { s: 'ICLN', t: 'etf' },
+        'automation': { s: 'ROBO', t: 'etf' }, 'cyber security': { s: 'CIBR', t: 'etf' }, 'gold etf': { s: 'GLD', t: 'etf' },
+        'nasdaq inc': { s: 'NDAQ', t: 'stock' }, 'blackrock': { s: 'BLK', t: 'stock' }, 'coinbase': { s: 'COIN', t: 'stock' },
+        'apple': { s: 'AAPL', t: 'stock' }, '865985': { s: 'AAPL', t: 'stock' }, 'tesla': { s: 'TSLA', t: 'stock' },
+        'nvidia': { s: 'NVDA', t: 'stock' }, 'microsoft': { s: 'MSFT', t: 'stock' }, 'amazon': { s: 'AMZN', t: 'stock' }, 'google': { s: 'GOOGL', t: 'stock' }
     };
 
     const els = {
@@ -304,10 +299,26 @@
         currency: document.getElementById('currencySelector')
     };
 
+    // --- INIT ---
     document.addEventListener('DOMContentLoaded', () => {
+        // Safe Load
+        try {
+            const raw = localStorage.getItem('ultimateAssets');
+            if (raw) {
+                let temp = JSON.parse(raw);
+                // CLEANER: Entferne kaputte Einträge ohne ID
+                assets = temp.filter(a => a && a.id);
+            }
+        } catch(e) { assets = []; }
+
+        apiKey = localStorage.getItem('finnhubKey') || '';
+        stealth = localStorage.getItem('stealthMode') === 'true';
+        currency = localStorage.getItem('appCurrency') || 'USD';
+
         if(apiKey) els.keyInput.value = apiKey;
         els.currency.value = currency; 
-        updateUI(); 
+        
+        render(); // Erst mal anzeigen was wir haben
         refreshPrices(); 
         setInterval(refreshPrices, 60000);
         els.input.addEventListener("keypress", (e) => { if (e.key === "Enter") autoSearch(); });
@@ -332,7 +343,7 @@
         } catch(e) { if(conversionRate === 1) conversionRate = 0.95; }
     }
 
-    // --- SMART SEARCH V33 ---
+    // --- SMART SEARCH ---
     async function autoSearch() {
         const q = els.input.value.trim().toLowerCase();
         if(!q) return;
@@ -345,10 +356,8 @@
                 const entry = WKN_MAP[q];
                 const symbol = entry.s || entry; 
                 const type = entry.t || 'stock';
-                const name = entry.n || q.toUpperCase();
-                
                 if(!apiKey) { alert('API Key fehlt!'); found = false; }
-                else { found = await checkStock(symbol, name, type); }
+                else { found = await checkStock(symbol, q.toUpperCase(), type); }
             }
             else if (COMMODITIES[q]) { 
                 const prettyName = q.charAt(0).toUpperCase() + q.slice(1);
@@ -385,25 +394,6 @@
     async function checkStock(query, customName = '', type = 'stock') {
         if(!apiKey) return false;
         try {
-            // A) Namens-Suche
-            const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${apiKey}`);
-            if(searchRes.ok) {
-                const sData = await searchRes.json();
-                if(sData.result && sData.result.length > 0) {
-                    const bestMatch = sData.result[0];
-                    const sym = bestMatch.symbol;
-                    let finalName = customName ? customName : bestMatch.description;
-                    
-                    const fRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${apiKey}`);
-                    const fData = await fRes.json();
-                    if(fData.c > 0) { 
-                        addAsset(sym, type, 0, 0, finalName); 
-                        alert(`Gefunden: ${finalName}`); 
-                        return true; 
-                    }
-                }
-            }
-            // B) Direkt-Symbol
             const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${query.toUpperCase()}&token=${apiKey}`);
             if(quoteRes.ok) {
                 const d = await quoteRes.json();
@@ -412,4 +402,170 @@
                     return true; 
                 }
             }
-        } catch
+        } catch(e) {}
+        return false;
+    }
+
+    async function manualAdd(prefillName = '') {
+        let name = prefillName || els.input.value.trim();
+        if(!name) name = prompt("Name der Position:");
+        if(!name) return;
+        
+        const priceStr = prompt(`Preis pro Einheit für "${name}" eingeben:`, "0");
+        if(priceStr !== null) {
+            let price = parseFloat(priceStr.replace(',', '.')) || 0;
+            const isEuro = confirm(`Ist der Betrag ${price} in EURO (€)?\n\n[OK] = Ja, Euro\n[Abbrechen] = Nein, Dollar ($)`);
+            if (isEuro) {
+                if (conversionRate === 1) await fetchExchangeRate();
+                price = price / conversionRate;
+            }
+            addAsset(name, 'manual', 1, price, name);
+            els.input.value = '';
+        }
+    }
+
+    function addAsset(id, type, amount = 0, manualPrice = 0, realName = '') {
+        const checkId = id.toLowerCase(); 
+        if(assets.find(a => a.id.toLowerCase() === checkId)) { alert('Bereits in der Liste.'); return; }
+        if(!realName) realName = id.charAt(0).toUpperCase() + id.slice(1);
+        assets.push({ id, type, amount, manualPrice, active: true, name: realName });
+        save(); refreshPrices();
+    }
+
+    // --- REFRESH ---
+    async function refreshPrices() {
+        if(isUpdating) return; // Blockiere doppelten Aufruf
+        isUpdating = true;
+
+        await fetchExchangeRate();
+
+        if(assets.length === 0) { 
+            showLoading(false); 
+            isUpdating = false; 
+            render(); 
+            return; 
+        }
+        
+        // Krypto
+        const cryptoIds = assets.filter(a => a.type === 'crypto').map(a => a.id).join(',');
+        if(cryptoIds) {
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd`);
+                const data = await res.json();
+                for(let id in data) prices[id] = data[id].usd;
+            } catch(e) {}
+        }
+
+        // Rohstoffe
+        const commoAssets = assets.filter(a => a.type === 'commodity');
+        if(commoAssets.length > 0) {
+            const mapIds = commoAssets.map(a => COMMODITIES[a.id]).join(',');
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${mapIds}&vs_currencies=usd`);
+                const data = await res.json();
+                commoAssets.forEach(a => {
+                    const apiId = COMMODITIES[a.id];
+                    if(data[apiId]) prices[a.id] = data[apiId].usd;
+                });
+            } catch(e) {}
+        }
+
+        // Aktien & ETFs
+        const stocks = assets.filter(a => a.type === 'stock' || a.type === 'etf');
+        if(stocks.length > 0 && apiKey) {
+            for(let stock of stocks) {
+                try {
+                    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.id}&token=${apiKey}`);
+                    const data = await res.json();
+                    if(data.c) prices[stock.id] = data.c;
+                    await new Promise(r => setTimeout(r, 250)); // Slow down for API
+                } catch(e) {}
+            }
+        }
+        
+        showLoading(false);
+        render();
+        isUpdating = false;
+    }
+
+    function render() {
+        els.list.innerHTML = '';
+        let total = 0;
+        const blur = stealth ? 'blur-value' : '';
+        const symbol = currency === 'USD' ? '$' : '€';
+        const displayFactor = currency === 'USD' ? 1 : conversionRate;
+
+        assets.forEach((asset, idx) => {
+            // SAFETY CHECK: Asset muss valide sein
+            if(!asset || !asset.id) return;
+
+            let basePrice = (asset.type === 'manual') ? asset.manualPrice : (prices[asset.id] || 0);
+            let displayPrice = basePrice * displayFactor;
+            let val = asset.amount * displayPrice;
+            
+            const isActive = (asset.active !== false);
+            if (isActive) total += val;
+            
+            const badgeMap = { 'crypto': 'Krypto', 'stock': 'Aktie', 'manual': 'Manuell', 'commodity': 'Rohstoff', 'etf': 'ETF' };
+            const badgeClass = { 'crypto': 'badge-crypto', 'stock': 'badge-stock', 'manual': 'badge-manual', 'commodity': 'badge-commo', 'etf': 'badge-etf' };
+            const opacityClass = isActive ? '' : 'inactive';
+            const checkedState = isActive ? 'checked' : '';
+            
+            const inputHtml = stealth 
+                ? `<span class="blur-value">HIDDEN</span>` 
+                : `<input type="number" class="small-input" value="${asset.amount}" onchange="updateAsset(${idx}, 'amount', this.value)">`;
+            
+            const manualPriceHtml = (!stealth && asset.type === 'manual') 
+                ? `<input type="number" class="small-input" value="${asset.manualPrice}" onchange="updateAsset(${idx}, 'price', this.value)" placeholder="$ Base">` 
+                : '';
+            
+            // Name Beautifier
+            let displayName = asset.name || asset.id;
+            if (TICKER_NAMES[asset.id]) displayName = TICKER_NAMES[asset.id];
+            else if (!asset.name) displayName = asset.id.charAt(0).toUpperCase() + asset.id.slice(1);
+
+            const html = `
+                <div class="asset-card ${opacityClass}">
+                    <div class="row">
+                        <div class="asset-info">
+                            <input type="checkbox" class="asset-checkbox" ${checkedState} onchange="toggleActive(${idx})">
+                            <div>
+                                <span class="asset-name" title="${displayName}">${displayName}</span>
+                                <span class="asset-badge ${badgeClass[asset.type]}">${badgeMap[asset.type]}</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right">
+                            <div class="asset-val ${blur}">${symbol}${val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            <div class="asset-sub">${displayPrice.toLocaleString(undefined, {maximumFractionDigits: 2})} ${symbol} / Stk</div>
+                        </div>
+                    </div>
+                    <div class="card-controls">
+                        <div style="display:flex; align-items:center; gap:8px; font-size:0.9rem;">
+                            Menge: ${inputHtml}
+                        </div>
+                        ${manualPriceHtml}
+                        <button class="del-btn" onclick="removeAsset(${idx})">🗑️</button>
+                    </div>
+                </div>`;
+            els.list.innerHTML += html;
+        });
+
+        els.total.innerText = symbol + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        if(stealth) els.total.classList.add('blur-value'); else els.total.classList.remove('blur-value');
+        els.backup.value = JSON.stringify({ assets, key: apiKey, curr: currency });
+    }
+
+    function updateAsset(idx, field, val) { const num = parseFloat(val) || 0; if(field === 'amount') assets[idx].amount = num; if(field === 'price') assets[idx].manualPrice = num; save(); render(); }
+    function toggleActive(idx) { if (assets[idx].active === undefined) assets[idx].active = true; assets[idx].active = !assets[idx].active; save(); render(); }
+    function removeAsset(idx) { if(confirm('Löschen?')) { assets.splice(idx, 1); save(); render(); } }
+    function toggleStealth() { stealth = !stealth; localStorage.setItem('stealthMode', stealth); updateUI(); render(); }
+    function saveKey() { const k = els.keyInput.value.trim(); if(k) { apiKey = k; localStorage.setItem('finnhubKey', k); alert('Gespeichert!'); refreshPrices(); } }
+    function hardReset() { if(confirm("ALLES löschen?")) { localStorage.clear(); location.reload(); } }
+    function copyBackup() { els.backup.select(); document.execCommand('copy'); alert('Kopiert!'); }
+    function importBackup() { try { const data = JSON.parse(els.import.value); if(data.assets) { assets = data.assets; if(data.key) { apiKey = data.key; localStorage.setItem('finnhubKey', apiKey); } if(data.curr) localStorage.setItem('appCurrency', data.curr); save(); location.reload(); } } catch(e) { alert('Ungültiger Code'); } }
+    function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
+    function updateUI() { els.eye.innerText = stealth ? "🔒" : "👁️"; }
+    function showLoading(show, text) { els.load.style.display = show ? 'block' : 'none'; if(text) els.load.innerText = text; }
+</script>
+</body>
+</html>
