@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
 
-    <title>Asset Tracker v29 (ETFs)</title>
+    <title>Asset Tracker v30 (Ultra DB)</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -177,7 +177,7 @@
     </div>
 
     <div class="input-group">
-        <input type="text" id="searchInput" class="main-input" placeholder="Suche (z.B. A0RPWH, Tesla)...">
+        <input type="text" id="searchInput" class="main-input" placeholder="Suche (z.B. MSCI World, Apple)...">
         <button class="control-btn add-btn" onclick="autoSearch()">+</button>
         <button class="control-btn manual-btn" onclick="manualAdd()">✎</button>
     </div>
@@ -198,53 +198,75 @@
     const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple', 'polkadot', 'link', 'xlm'];
     const COMMODITIES = { 'gold': 'pax-gold', 'silber': 'kinesis-silver', 'silver': 'kinesis-silver', 'öl': 'tether-oil', 'oil': 'tether-oil' };
 
-    // --- WKN MAPPING (DIE GROSSE LISTE) ---
-    // Links: WKN (kleingeschrieben) -> Rechts: US-Ticker (für stabilen Preis & Währung)
+    // --- DIE ULTRA DATENBANK (WKN, NAMEN -> US-TICKER) ---
     const WKN_MAP = {
-        // BELIEBTE ETFs (Wir nutzen US-Proxies für korrekte Umrechnung)
-        'a0rpwh': 'URTH',   // iShares Core MSCI World -> US Ticker URTH
-        'a1jx52': 'VT',     // Vanguard FTSE All-World Dist -> US Ticker VT
-        'a2pkxg': 'VT',     // Vanguard FTSE All-World Acc -> US Ticker VT (gleicher Kursverlauf)
-        'a0yedl': 'IVV',    // iShares Core S&P 500
-        '628930': 'QQQ',    // iShares NASDAQ 100
-        'a0f5uh': 'EEM',    // iShares MSCI Emerging Markets
-        'lyx0ag': 'URTH',   // Lyxor MSCI World -> Proxy URTH
-        'a0hgv0': 'IEMG',   // iShares Core MSCI EM IMI
-        'a113fm': 'ACWI',   // Xtrackers MSCI AC World -> Proxy ACWI
-        'dbx1mw': 'URTH',   // Xtrackers MSCI World -> Proxy URTH
+        // --- WELT ---
+        'msci world': 'URTH', 'a0rpwh': 'URTH', 'lyx0ag': 'URTH', 'dbx1mw': 'URTH',
+        'all world': 'VT', 'a1jx52': 'VT', 'a2pkxg': 'VT', 'vanguard all world': 'VT',
+        'acwi': 'ACWI', 'a113fm': 'ACWI',
         
-        // TECH GIANTS
-        '865985': 'AAPL',  // Apple
-        'a1cx3t': 'TSLA',  // Tesla
-        '906866': 'AMZN',  // Amazon
-        '870747': 'MSFT',  // Microsoft
-        'a0b733': 'GOOGL', // Alphabet A
-        'a1401z': 'META',  // Meta
-        '918422': 'NVDA',  // Nvidia
-        '863186': 'AMD',   // AMD
-        '855686': 'DIS',   // Disney
-        '851399': 'IBM',   // IBM
-        '853688': 'INTC',  // Intel
-        '860853': 'PYPL',  // PayPal
-        'a1jwvx': 'PLTR',  // Palantir
-        'a2qjlz': 'COIN',  // Coinbase
-        'a1j5rx': 'MSTR',  // Microstrategy
-        '881223': 'BRK.B', // Berkshire Hathaway
-
-        // DAX & DEUTSCHLAND (Nutzt .DE Ticker)
+        // --- USA ---
+        's&p 500': 'IVV', 'a0yedl': 'IVV', 'a0ybr0': 'IVV',
+        'nasdaq 100': 'QQQ', 'a0f5uf': 'QQQ', 'a2h577': 'QQQ',
+        'dow jones': 'DIA', '628939': 'DIA',
+        
+        // --- EUROPA & DEUTSCHLAND ---
+        'dax': 'DAX', '593393': 'DAX', 'dax etf': 'DAX',
+        'euro stoxx 50': 'FEZ', '935927': 'FEZ',
+        'stoxx 600': 'VGK', '263530': 'VGK',
+        
+        // --- EMERGING MARKETS ---
+        'emerging markets': 'IEMG', 'a111x9': 'IEMG', 'a0hgv0': 'IEMG',
+        'msci em': 'EEM', 'a0f5uh': 'EEM',
+        
+        // --- THEMEN & LÄNDER ---
+        'clean energy': 'ICLN', 'a0mw0m': 'ICLN',
+        'automation': 'ROBO', 'a12gjd': 'ROBO',
+        'robotics': 'ROBO',
+        'cyber security': 'CIBR', 'a142n1': 'CIBR',
+        'digital security': 'CIBR',
+        'gold etf': 'GLD', 'a0s9gb': 'GLD', 'ewg2ld': 'GLD',
+        'bitcoin etf': 'BITO', // Nur als Indikator
+        'china': 'MCHI', 'a1j5st': 'MCHI',
+        'india': 'INDA', 'a0x8zs': 'INDA',
+        'japan': 'EWJ', 'a0d8qz': 'EWJ',
+        
+        // --- EINZELAKTIEN DEUTSCHLAND (via WKN) ---
         '840400': 'ALV.DE', // Allianz
         '519000': 'BMW.DE', // BMW
-        '543900': 'CON.DE', // Continental
-        '555750': 'DTE.DE', // Deutsche Telekom
-        '710000': 'MBG.DE', // Mercedes-Benz
+        '555750': 'DTE.DE', // Telekom
+        '710000': 'MBG.DE', // Mercedes
         '716460': 'SAP.DE', // SAP
         '723610': 'SIE.DE', // Siemens
         '766403': 'VOW3.DE',// VW
         'basf11': 'BAS.DE', // BASF
         'bay001': 'BAYN.DE',// Bayer
-        'a1ewww': 'ADS.DE', // Adidas
+        '623100': 'IFX.DE', // Infineon
         '703000': 'RHM.DE', // Rheinmetall
         '514000': 'DBK.DE', // Deutsche Bank
+        
+        // --- TECH GIANTS (Namen & WKN) ---
+        'apple': 'AAPL', '865985': 'AAPL',
+        'tesla': 'TSLA', 'a1cx3t': 'TSLA',
+        'amazon': 'AMZN', '906866': 'AMZN',
+        'microsoft': 'MSFT', '870747': 'MSFT',
+        'google': 'GOOGL', 'a0b733': 'GOOGL',
+        'alphabet': 'GOOGL',
+        'meta': 'META', 'a1401z': 'META', 'facebook': 'META',
+        'nvidia': 'NVDA', '918422': 'NVDA',
+        'netflix': 'NFLX', '552484': 'NFLX',
+        'palantir': 'PLTR', 'a1jwvx': 'PLTR',
+        'paypal': 'PYPL', '860853': 'PYPL',
+        'coinbase': 'COIN', 'a2qjlz': 'COIN',
+        'microstrategy': 'MSTR', 'a1j5rx': 'MSTR',
+        'berkshire': 'BRK.B', '881223': 'BRK.B',
+        'cocacola': 'KO', '853887': 'KO',
+        'pepsi': 'PEP', '850663': 'PEP',
+        'mcdonalds': 'MCD', '856958': 'MCD',
+        'disney': 'DIS', '855686': 'DIS',
+        'intel': 'INTC', '853688': 'INTC',
+        'amd': 'AMD', '863186': 'AMD',
+        'visa': 'V', 'a0nc7b': 'V',
     };
 
     const els = {
@@ -288,7 +310,7 @@
         } catch(e) { if(conversionRate === 1) conversionRate = 0.95; }
     }
 
-    // --- SMART SEARCH ---
+    // --- SMART SEARCH V30 ---
     async function autoSearch() {
         const q = els.input.value.trim().toLowerCase();
         if(!q) return;
@@ -297,11 +319,13 @@
         let found = false;
 
         try {
-            // 1. WKN CHECK
+            // 1. WKN / NAMEN DB CHECK
             if (WKN_MAP[q]) {
                 const symbol = WKN_MAP[q];
-                if(!apiKey) { alert('API Key fehlt für WKN Suche!'); found = false; }
-                else { found = await checkStock(symbol, q); } // q wird als Name-Fallback übergeben
+                // Schönen Namen generieren (z.B. "MSCI World" statt "msci world")
+                const prettyName = q.toUpperCase(); 
+                if(!apiKey) { alert('API Key fehlt!'); found = false; }
+                else { found = await checkStock(symbol, prettyName); }
             }
             // 2. ROHSTOFFE
             else if (COMMODITIES[q]) { 
@@ -338,10 +362,10 @@
         return false;
     }
 
-    async function checkStock(query, wknName = '') {
+    async function checkStock(query, customName = '') {
         if(!apiKey) return false;
         try {
-            // A) Namens-Suche (bevorzugt)
+            // A) Namens-Suche (liefert meist besseren vollen Namen)
             const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${apiKey}`);
             if(searchRes.ok) {
                 const sData = await searchRes.json();
@@ -349,16 +373,14 @@
                     const bestMatch = sData.result[0];
                     const sym = bestMatch.symbol;
                     
-                    // Nimm WKN als Name falls verfügbar (z.B. "A0RPWH"), sonst Description
-                    let name = wknName ? wknName.toUpperCase() : bestMatch.description;
-                    // Wenn wir eine WKN gesucht haben, fügen wir den echten Namen hinzu
-                    if(wknName) name = `${name.toUpperCase()} (${bestMatch.description.substring(0,15)}...)`;
-
+                    // Name Priorität: 1. Custom (aus Suche), 2. API Description
+                    let finalName = customName ? customName : bestMatch.description;
+                    
                     const fRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${apiKey}`);
                     const fData = await fRes.json();
                     if(fData.c > 0) { 
-                        addAsset(sym, 'stock', 0, 0, name); 
-                        alert(`Gefunden: ${bestMatch.description}`); 
+                        addAsset(sym, 'stock', 0, 0, finalName); 
+                        alert(`Gefunden: ${finalName} (${sym})`); 
                         return true; 
                     }
                 }
@@ -369,7 +391,7 @@
             if(quoteRes.ok) {
                 const d = await quoteRes.json();
                 if(d.c > 0) { 
-                    addAsset(query.toUpperCase(), 'stock', 0, 0, query.toUpperCase()); 
+                    addAsset(query.toUpperCase(), 'stock', 0, 0, customName || query.toUpperCase()); 
                     return true; 
                 }
             }
