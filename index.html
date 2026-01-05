@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
 
-    <title>Asset Tracker v20</title>
+    <title>Asset Tracker v21 (Speed)</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -36,7 +36,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Header */
         header {
             display: flex;
             justify-content: space-between;
@@ -69,7 +68,6 @@
             justify-content: center;
         }
 
-        /* Settings Panel */
         #settingsPanel {
             background: #2c2c2e;
             padding: 20px;
@@ -112,7 +110,6 @@
         .btn-orange { background: var(--orange); }
         .btn-red { background: var(--red); margin-top:20px; }
 
-        /* Input Area */
         .input-group {
             display: flex;
             gap: 8px;
@@ -148,7 +145,6 @@
         .add-btn { background: var(--accent); color: white; }
         .manual-btn { background: var(--card-bg); color: var(--purple); border: 1px solid #444; font-size: 1.2rem; }
 
-        /* Cards */
         .asset-card {
             background-color: var(--card-bg);
             padding: 16px;
@@ -161,7 +157,6 @@
 
         .row { display: flex; justify-content: space-between; align-items: center; }
         
-        /* Neuer Header Bereich in der Karte mit Icon */
         .asset-header { display: flex; align-items: center; gap: 12px; }
         
         .asset-icon {
@@ -174,338 +169,12 @@
             align-items: center;
             justify-content: center;
             font-size: 16px;
+            flex-shrink: 0; /* Verhindert das Quetschen des Icons */
         }
 
-        .asset-checkbox { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; }
+        .asset-checkbox { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
         
         .asset-name { font-weight: 700; font-size: 1.1rem; text-transform: capitalize; }
         .asset-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-left: 5px; vertical-align: middle; opacity: 0.8;}
         
-        .badge-crypto { background: rgba(48, 209, 88, 0.2); color: var(--green); }
-        .badge-stock { background: rgba(10, 132, 255, 0.2); color: var(--accent); }
-        .badge-manual { background: rgba(191, 90, 242, 0.2); color: var(--purple); }
-        .badge-commo { background: rgba(255, 215, 0, 0.2); color: var(--gold); }
-
-        .asset-val { font-size: 1.1rem; font-weight: 600; transition: filter 0.3s; }
-        .asset-sub { font-size: 0.85rem; color: var(--text-muted); }
-
-        .card-controls {
-            margin-top: 12px;
-            padding-top: 10px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .small-input {
-            background: #000;
-            border: 1px solid #333;
-            color: white;
-            padding: 8px;
-            border-radius: 6px;
-            width: 80px;
-            text-align: right;
-        }
-        .del-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
-
-        .loading { text-align: center; color: var(--accent); margin-top: 20px; display: none; font-weight: bold; font-size: 0.9rem; }
-        .stealth-hint { font-size: 0.7rem; color: #666; }
-        .blur-value { filter: blur(12px) !important; opacity: 0.5; user-select: none; pointer-events: none; }
-    </style>
-</head>
-<body>
-
-    <header>
-        <div class="total-container" onclick="toggleStealth()">
-            <div style="font-size: 0.8rem; color: #888; font-weight: 600;">
-                GESAMTVERMÖGEN <span id="eyeIcon">👁️</span>
-            </div>
-            <div class="total-balance" id="totalDisplay">$0.00</div>
-            <div class="stealth-hint">(Tippen zum Verstecken)</div>
-        </div>
-        <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
-    </header>
-
-    <div id="settingsPanel">
-        <div class="settings-section">
-            <h3>Währung</h3>
-            <select id="currencySelector" onchange="changeCurrency()">
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-            </select>
-        </div>
-
-        <div class="settings-section">
-            <h3>Finnhub API Key</h3>
-            <input type="text" id="apiKeyInput" placeholder="Key eingeben...">
-            <button class="action-btn btn-green" onclick="saveKey()">Speichern</button>
-        </div>
-        <div class="settings-section">
-            <h3>Backup / Teilen</h3>
-            <textarea id="backupOutput" rows="2" readonly onclick="this.select()"></textarea>
-            <button class="action-btn btn-blue" onclick="copyBackup()">Code kopieren</button>
-            <div style="margin-top:15px;">
-                <input type="text" id="importInput" placeholder="Backup-Code einfügen...">
-                <button class="action-btn btn-orange" onclick="importBackup()">Wiederherstellen</button>
-            </div>
-        </div>
-        <button class="action-btn btn-red" onclick="hardReset()">⚠️ App zurücksetzen</button>
-    </div>
-
-    <div class="input-group">
-        <input type="text" id="searchInput" class="main-input" placeholder="Suche (z.B. Apple, Gold)...">
-        <button class="control-btn add-btn" onclick="autoSearch()">+</button>
-        <button class="control-btn manual-btn" onclick="manualAdd()">✎</button>
-    </div>
-
-    <div id="loading" class="loading">Lade Daten...</div>
-    <div id="list"></div>
-
-<script>
-    // --- STATE ---
-    let assets = JSON.parse(localStorage.getItem('ultimateAssets')) || [];
-    let apiKey = localStorage.getItem('finnhubKey') || '';
-    let stealth = localStorage.getItem('stealthMode') === 'true';
-    let currency = localStorage.getItem('appCurrency') || 'USD'; 
-    let prices = {};
-    let conversionRate = 1; 
-
-    // DATENBANKEN
-    const KNOWN_STOCKS = ['apple', 'tesla', 'microsoft', 'amazon', 'google', 'meta', 'netflix', 'nvidia', 'aapl', 'tsla', 'msft', 'amzn', 'googl', 'fb', 'nflx', 'nvda'];
-    const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple'];
-    const COMMODITIES = { 'gold': 'pax-gold', 'silber': 'kinesis-silver', 'silver': 'kinesis-silver', 'öl': 'tether-oil', 'oil': 'tether-oil' };
-
-    const els = {
-        list: document.getElementById('list'),
-        total: document.getElementById('totalDisplay'),
-        eye: document.getElementById('eyeIcon'),
-        load: document.getElementById('loading'),
-        input: document.getElementById('searchInput'),
-        settings: document.getElementById('settingsPanel'),
-        keyInput: document.getElementById('apiKeyInput'),
-        backup: document.getElementById('backupOutput'),
-        import: document.getElementById('importInput'),
-        currency: document.getElementById('currencySelector')
-    };
-
-    document.addEventListener('DOMContentLoaded', () => {
-        if(apiKey) els.keyInput.value = apiKey;
-        els.currency.value = currency; 
-        updateUI(); 
-        refreshPrices(); 
-        setInterval(refreshPrices, 60000);
-        els.input.addEventListener("keypress", (e) => { if (e.key === "Enter") autoSearch(); });
-    });
-
-    // --- CURRENCY LOGIC ---
-    function changeCurrency() {
-        currency = els.currency.value;
-        localStorage.setItem('appCurrency', currency);
-        showLoading(true, "Wechsle Währung...");
-        refreshPrices(); 
-    }
-
-    async function fetchExchangeRate() {
-        try {
-            const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=eur');
-            const data = await res.json();
-            if(data.tether && data.tether.eur) conversionRate = data.tether.eur;
-        } catch(e) { if(conversionRate === 1) conversionRate = 0.95; }
-    }
-
-    // --- SEARCH ---
-    async function autoSearch() {
-        const q = els.input.value.trim().toLowerCase();
-        if(!q) return;
-
-        showLoading(true, `Suche "${q}"...`);
-        let found = false;
-
-        try {
-            if (COMMODITIES[q]) { addAsset(q, 'commodity'); found = true; }
-            else if (KNOWN_STOCKS.includes(q)) {
-                if(!apiKey) { alert('API Key fehlt!'); found = false; }
-                else { found = await checkStock(q); }
-            }
-            else if (KNOWN_CRYPTO.includes(q)) { found = await checkCrypto(q); }
-            else {
-                if (apiKey) found = await checkStock(q);
-                if (!found) found = await checkCrypto(q);
-            }
-        } catch (error) { found = false; }
-
-        showLoading(false);
-        if (found) els.input.value = '';
-        else setTimeout(() => {
-            if(confirm(`"${els.input.value}" nicht gefunden. Manuell anlegen?`)) manualAdd(els.input.value);
-        }, 100);
-    }
-
-    async function checkCrypto(query) {
-        try {
-            // Wir holen direkt Market Data für das Bild
-            const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${query}`);
-            const data = await res.json();
-            if(data && data.length > 0) {
-                // Wir speichern das Bild direkt im Asset
-                addAsset(query, 'crypto', 0, 0, data[0].image);
-                return true; 
-            }
-        } catch(e) {}
-        return false;
-    }
-
-    async function checkStock(query) {
-        if(!apiKey) return false;
-        try {
-            // Erst Quote checken
-            const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${query.toUpperCase()}&token=${apiKey}`);
-            if(quoteRes.ok) {
-                const d = await quoteRes.json();
-                if(d.c > 0) { 
-                    // Jetzt Logo holen (Profile2)
-                    let logoUrl = '';
-                    try {
-                        const profRes = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${query.toUpperCase()}&token=${apiKey}`);
-                        const profData = await profRes.json();
-                        if(profData.logo) logoUrl = profData.logo;
-                    } catch(e) {}
-
-                    addAsset(query.toUpperCase(), 'stock', 0, 0, logoUrl); 
-                    return true; 
-                }
-            }
-            
-            // Suche Fallback... (Vereinfacht für Länge: wenn Suche Treffer hat, machen wir addAsset ohne Logo und lassen den Background Updater arbeiten)
-            const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${apiKey}`);
-            if(searchRes.ok) {
-                const sData = await searchRes.json();
-                if(sData.result && sData.result.length > 0) {
-                    const sym = sData.result[0].symbol;
-                    const fRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${apiKey}`);
-                    const fData = await fRes.json();
-                    if(fData.c > 0) { 
-                        // Versuch Logo auch hier
-                        let logoUrl = '';
-                        try {
-                            const profRes = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${sym}&token=${apiKey}`);
-                            const profData = await profRes.json();
-                            if(profData.logo) logoUrl = profData.logo;
-                        } catch(e) {}
-
-                        addAsset(sym, 'stock', 0, 0, logoUrl); 
-                        alert(`Gefunden: ${sData.result[0].description}`); 
-                        return true; 
-                    }
-                }
-            }
-        } catch(e) {}
-        return false;
-    }
-
-    async function manualAdd(prefillName = '') {
-        let name = prefillName || els.input.value.trim();
-        if(!name) name = prompt("Name der Position:");
-        if(!name) return;
-        
-        const priceStr = prompt(`Preis pro Einheit für "${name}" eingeben:`, "0");
-        
-        if(priceStr !== null) {
-            let price = parseFloat(priceStr.replace(',', '.')) || 0;
-            const isEuro = confirm(`Ist der Betrag ${price} in EURO (€)?\n\n[OK] = Ja, Euro\n[Abbrechen] = Nein, Dollar ($)`);
-            if (isEuro) {
-                if (conversionRate === 1) await fetchExchangeRate();
-                price = price / conversionRate;
-            }
-            addAsset(name, 'manual', 1, price);
-            els.input.value = '';
-        }
-    }
-
-    function addAsset(id, type, amount = 0, manualPrice = 0, image = '') {
-        const checkId = id.toLowerCase(); 
-        if(assets.find(a => a.id.toLowerCase() === checkId)) { alert('Bereits in der Liste.'); return; }
-        // Speichere Bild URL mit ab
-        assets.push({ id, type, amount, manualPrice, active: true, image: image });
-        save(); refreshPrices();
-    }
-
-    // --- REFRESH & CONVERT & BACKGROUND IMAGES ---
-    async function refreshPrices() {
-        await fetchExchangeRate();
-        if(assets.length === 0) { render(); return; }
-        
-        // 1. Krypto & Rohstoffe (UPDATE LOGOS AUTOMATISCH)
-        const cryptoAssets = assets.filter(a => a.type === 'crypto' || a.type === 'commodity');
-        if(cryptoAssets.length > 0) {
-            // IDs sammeln (inkl. Commodity Mapping)
-            let queryIds = [];
-            cryptoAssets.forEach(a => {
-                if(a.type === 'commodity') queryIds.push(COMMODITIES[a.id]);
-                else queryIds.push(a.id);
-            });
-            
-            try {
-                // Wir nutzen jetzt /coins/markets um Bilder mitzubekommen!
-                const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${queryIds.join(',')}`);
-                const data = await res.json();
-                
-                data.forEach(coin => {
-                    // Preis update
-                    // Finde Assets die zu diesem Coin gehören
-                    assets.forEach(asset => {
-                        let match = false;
-                        if(asset.type === 'crypto' && asset.id === coin.id) match = true;
-                        if(asset.type === 'commodity' && COMMODITIES[asset.id] === coin.id) match = true;
-                        
-                        if(match) {
-                            prices[asset.id] = coin.current_price;
-                            // AUTO-UPDATE BILD: Wenn keins da ist oder neues da ist
-                            if(!asset.image) asset.image = coin.image;
-                        }
-                    });
-                });
-            } catch(e) {}
-        }
-
-        // 2. Aktien (PREISE)
-        const stocks = assets.filter(a => a.type === 'stock');
-        let stockLogoUpdated = false;
-
-        if(stocks.length > 0 && apiKey) {
-            for(let stock of stocks) {
-                try {
-                    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.id}&token=${apiKey}`);
-                    const data = await res.json();
-                    if(data.c) prices[stock.id] = data.c;
-                    
-                    // BACKGROUND LOGO FETCH (nur eins pro Zyklus um Limit zu schonen)
-                    if(!stock.image && !stockLogoUpdated) {
-                         const profRes = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${stock.id}&token=${apiKey}`);
-                         const profData = await profRes.json();
-                         if(profData.logo) {
-                             stock.image = profData.logo;
-                             stockLogoUpdated = true; // Nur eins pro Minute
-                         }
-                    }
-                } catch(e) {}
-                await new Promise(r => setTimeout(r, 400)); 
-            }
-        }
-        
-        save(); // Um Logos zu speichern
-        showLoading(false);
-        render();
-    }
-
-    function render() {
-        els.list.innerHTML = '';
-        let total = 0;
-        const blur = stealth ? 'blur-value' : '';
-        const symbol = currency === 'USD' ? '$' : '€';
-        const displayFactor = currency === 'USD' ? 1 : conversionRate;
-
-        assets.forEach((asset, idx) => {
-            let basePrice = (asset.type === 'manual') ? asset.manualPrice : (prices[asset.id] || 0);
-            let displayPrice = basePrice * displayFactor;
-            let val = asset.amount * displayPrice;
+        .badge-crypto { background: rgba(48, 209, 88,
