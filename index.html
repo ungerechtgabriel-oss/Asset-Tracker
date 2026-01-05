@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
 
-    <title>Asset Tracker v14</title>
+    <title>Asset Tracker v15</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -241,8 +241,9 @@
     let stealth = localStorage.getItem('stealthMode') === 'true';
     let prices = {};
 
-    // EINDEUTIGE KRYPTO BEGRIFFE (Diese werden immer als Krypto gesucht)
-    const PRIORITY_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'dot', 'matic', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple', 'polkadot', 'litecoin', 'ltc'];
+    // SICHERHEITS-LISTEN
+    const KNOWN_STOCKS = ['apple', 'tesla', 'microsoft', 'amazon', 'google', 'meta', 'netflix', 'nvidia', 'aapl', 'tsla', 'msft', 'amzn', 'googl', 'fb', 'nflx', 'nvda'];
+    const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple'];
 
     const els = {
         list: document.getElementById('list'),
@@ -262,7 +263,7 @@
         els.input.addEventListener("keypress", (e) => { if (e.key === "Enter") autoSearch(); });
     });
 
-    // --- SMART SEARCH LOGIC ---
+    // --- SMART SEARCH (STRICT MODE) ---
     async function autoSearch() {
         const q = els.input.value.trim().toLowerCase();
         if(!q) return;
@@ -270,32 +271,37 @@
         showLoading(true, `Suche "${q}"...`);
         let found = false;
 
-        // ENTSCHEIDUNG: Krypto oder Aktie zuerst?
-        const isCryptoPriority = PRIORITY_CRYPTO.includes(q);
+        // 1. IST ES EINE BEKANNTE AKTIE? (Apple, Tesla...)
+        if (KNOWN_STOCKS.includes(q)) {
+            if(!apiKey) {
+                alert(`Für Aktien wie "${q}" brauchst du den API Key! Klicke oben auf ⚙️.`);
+                showLoading(false);
+                return; 
+            }
+            // Zwinge Aktiensuche, verbiete Krypto
+            found = await checkStock(q);
+            if (!found) alert(`Konnte Aktie "${q}" nicht laden. API-Key prüfen!`);
         
-        // Strategy: 
-        // 1. Wenn in Crypto Priority Liste -> Erst Krypto Check
-        // 2. Sonst -> Erst Aktien Check (fix für "Apple")
-        
-        if (isCryptoPriority) {
+        // 2. IST ES EINE BEKANNTE KRYPTO? (BTC, ETH...)
+        } else if (KNOWN_CRYPTO.includes(q)) {
             found = await checkCrypto(q);
-            if (!found && apiKey) found = await checkStock(q);
+        
+        // 3. SONSTIGES (Unbekannt -> Versuche beides)
         } else {
-            // Erst Aktie versuchen
+            // Erst Aktie (wenn Key da)
             if (apiKey) found = await checkStock(q);
-            // Wenn keine Aktie gefunden -> Krypto probieren
+            // Dann Krypto
             if (!found) found = await checkCrypto(q);
         }
 
-        // Wenn gar nichts gefunden -> Manuell
-        if(!found) {
+        if(!found && !KNOWN_STOCKS.includes(q)) {
             setTimeout(() => {
-                if(confirm(`"${els.input.value}" nicht automatisch gefunden. Manuell anlegen?`)) {
+                if(confirm(`"${els.input.value}" nicht gefunden. Manuell anlegen?`)) {
                     manualAdd(els.input.value);
                 }
             }, 100);
         } else {
-            els.input.value = '';
+            if(found) els.input.value = '';
         }
         showLoading(false);
     }
@@ -304,7 +310,6 @@
         try {
             const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${query}&vs_currencies=usd`);
             const data = await res.json();
-            // WICHTIG: Prüfen ob Preis > 0 ist (filtert tote Token wie Apple-Token)
             if(data[query] && data[query].usd > 0) {
                 addAsset(query, 'crypto');
                 return true;
@@ -315,7 +320,7 @@
 
     async function checkStock(query) {
         try {
-            // 1. Suche nach Symbol (z.B. AAPL)
+            // A) Symbol direkt
             const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${query.toUpperCase()}&token=${apiKey}`);
             const quoteData = await quoteRes.json();
             if(quoteData && quoteData.c > 0) {
@@ -323,13 +328,12 @@
                 return true;
             }
 
-            // 2. Suche nach Name (z.B. Apple)
+            // B) Suche
             const searchRes = await fetch(`https://finnhub.io/api/v1/search?q=${query}&token=${apiKey}`);
             const searchData = await searchRes.json();
             
             if(searchData.result && searchData.result.length > 0) {
                 const symbol = searchData.result[0].symbol;
-                // Preis Check für das gefundene Symbol
                 const checkRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${apiKey}`);
                 const checkData = await checkRes.json();
                 
@@ -343,7 +347,7 @@
         return false;
     }
 
-    // --- STANDARD FUNKTIONEN ---
+    // --- STANDARD ---
     function manualAdd(prefillName = '') {
         let name = prefillName || els.input.value.trim();
         if(!name) name = prompt("Name der Position:");
@@ -395,55 +399,3 @@
             const val = asset.amount * price;
             const isActive = (asset.active !== false);
             if (isActive) total += val;
-            const badgeMap = { 'crypto': 'Krypto', 'stock': 'Aktie', 'manual': 'Manuell' };
-            const badgeClass = { 'crypto': 'badge-crypto', 'stock': 'badge-stock', 'manual': 'badge-manual' };
-            const opacityClass = isActive ? '' : 'inactive';
-            const checkedState = isActive ? 'checked' : '';
-            const inputHtml = stealth ? `<span class="blur-value">HIDDEN</span>` : `<input type="number" class="small-input" value="${asset.amount}" onchange="updateAsset(${idx}, 'amount', this.value)">`;
-            const manualPriceHtml = (!stealth && asset.type === 'manual') ? `<input type="number" class="small-input" value="${asset.manualPrice}" onchange="updateAsset(${idx}, 'price', this.value)" placeholder="$">` : '';
-
-            const html = `
-                <div class="asset-card ${opacityClass}">
-                    <div class="row">
-                        <div class="asset-info">
-                            <input type="checkbox" class="asset-checkbox" ${checkedState} onchange="toggleActive(${idx})">
-                            <div>
-                                <span class="asset-name">${asset.id}</span>
-                                <span class="asset-badge ${badgeClass[asset.type]}">${badgeMap[asset.type]}</span>
-                            </div>
-                        </div>
-                        <div style="text-align:right">
-                            <div class="asset-val ${blur}">$${val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                            <div class="asset-sub">${price.toLocaleString()} $ / Stk</div>
-                        </div>
-                    </div>
-                    <div class="card-controls">
-                        <div style="display:flex; align-items:center; gap:8px; font-size:0.9rem;">
-                            Menge: ${inputHtml}
-                        </div>
-                        ${manualPriceHtml}
-                        <button class="del-btn" onclick="removeAsset(${idx})">🗑️</button>
-                    </div>
-                </div>`;
-            els.list.innerHTML += html;
-        });
-        els.total.innerText = '$' + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        if(stealth) els.total.classList.add('blur-value'); else els.total.classList.remove('blur-value');
-        els.backup.value = JSON.stringify({ assets, key: apiKey });
-    }
-
-    function updateAsset(idx, field, val) { const num = parseFloat(val) || 0; if(field === 'amount') assets[idx].amount = num; if(field === 'price') assets[idx].manualPrice = num; save(); render(); }
-    function toggleActive(idx) { if (assets[idx].active === undefined) assets[idx].active = true; assets[idx].active = !assets[idx].active; save(); render(); }
-    function removeAsset(idx) { if(confirm('Löschen?')) { assets.splice(idx, 1); save(); render(); } }
-    function toggleStealth() { stealth = !stealth; localStorage.setItem('stealthMode', stealth); updateUI(); render(); }
-    function toggleSettings() { els.settings.style.display = els.settings.style.display === 'block' ? 'none' : 'block'; }
-    function saveKey() { const k = els.keyInput.value.trim(); if(k) { apiKey = k; localStorage.setItem('finnhubKey', k); alert('Gespeichert!'); refreshPrices(); } }
-    function hardReset() { if(confirm("ALLES löschen?")) { localStorage.clear(); location.reload(); } }
-    function copyBackup() { els.backup.select(); document.execCommand('copy'); alert('Kopiert!'); }
-    function importBackup() { try { const data = JSON.parse(els.import.value); if(data.assets) { assets = data.assets; if(data.key) { apiKey = data.key; localStorage.setItem('finnhubKey', apiKey); } save(); location.reload(); } } catch(e) { alert('Ungültiger Code'); } }
-    function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
-    function updateUI() { els.eye.innerText = stealth ? "🔒" : "👁️"; }
-    function showLoading(show, text) { els.load.style.display = show ? 'block' : 'none'; if(text) els.load.innerText = text; }
-</script>
-</body>
-</html>
