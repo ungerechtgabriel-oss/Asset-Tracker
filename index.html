@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
 
-    <title>Asset Tracker v21 (Speed)</title>
+    <title>Asset Tracker v22</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -36,6 +36,7 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* Header */
         header {
             display: flex;
             justify-content: space-between;
@@ -68,6 +69,7 @@
             justify-content: center;
         }
 
+        /* Settings Panel */
         #settingsPanel {
             background: #2c2c2e;
             padding: 20px;
@@ -110,6 +112,7 @@
         .btn-orange { background: var(--orange); }
         .btn-red { background: var(--red); margin-top:20px; }
 
+        /* Input Area */
         .input-group {
             display: flex;
             gap: 8px;
@@ -145,6 +148,7 @@
         .add-btn { background: var(--accent); color: white; }
         .manual-btn { background: var(--card-bg); color: var(--purple); border: 1px solid #444; font-size: 1.2rem; }
 
+        /* Cards */
         .asset-card {
             background-color: var(--card-bg);
             padding: 16px;
@@ -169,7 +173,7 @@
             align-items: center;
             justify-content: center;
             font-size: 16px;
-            flex-shrink: 0; /* Verhindert das Quetschen des Icons */
+            flex-shrink: 0;
         }
 
         .asset-checkbox { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
@@ -177,4 +181,208 @@
         .asset-name { font-weight: 700; font-size: 1.1rem; text-transform: capitalize; }
         .asset-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-left: 5px; vertical-align: middle; opacity: 0.8;}
         
-        .badge-crypto { background: rgba(48, 209, 88,
+        .badge-crypto { background: rgba(48, 209, 88, 0.2); color: var(--green); }
+        .badge-stock { background: rgba(10, 132, 255, 0.2); color: var(--accent); }
+        .badge-manual { background: rgba(191, 90, 242, 0.2); color: var(--purple); }
+        .badge-commo { background: rgba(255, 215, 0, 0.2); color: var(--gold); }
+
+        .asset-val { font-size: 1.1rem; font-weight: 600; transition: filter 0.3s; }
+        .asset-sub { font-size: 0.85rem; color: var(--text-muted); }
+
+        .card-controls {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .small-input {
+            background: #000;
+            border: 1px solid #333;
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            width: 80px;
+            text-align: right;
+        }
+        .del-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
+
+        .loading { text-align: center; color: var(--accent); margin-top: 20px; display: none; font-weight: bold; font-size: 0.9rem; }
+        .stealth-hint { font-size: 0.7rem; color: #666; }
+        .blur-value { filter: blur(12px) !important; opacity: 0.5; user-select: none; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="total-container" onclick="toggleStealth()">
+            <div style="font-size: 0.8rem; color: #888; font-weight: 600;">
+                GESAMTVERMÖGEN <span id="eyeIcon">👁️</span>
+            </div>
+            <div class="total-balance" id="totalDisplay">$0.00</div>
+            <div class="stealth-hint">(Tippen zum Verstecken)</div>
+        </div>
+        <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
+    </header>
+
+    <div id="settingsPanel">
+        <div class="settings-section">
+            <h3>Währung</h3>
+            <select id="currencySelector" onchange="changeCurrency()">
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+            </select>
+        </div>
+
+        <div class="settings-section">
+            <h3>Finnhub API Key</h3>
+            <input type="text" id="apiKeyInput" placeholder="Key eingeben...">
+            <button class="action-btn btn-green" onclick="saveKey()">Speichern</button>
+        </div>
+        <div class="settings-section">
+            <h3>Backup / Teilen</h3>
+            <textarea id="backupOutput" rows="2" readonly onclick="this.select()"></textarea>
+            <button class="action-btn btn-blue" onclick="copyBackup()">Code kopieren</button>
+            <div style="margin-top:15px;">
+                <input type="text" id="importInput" placeholder="Backup-Code einfügen...">
+                <button class="action-btn btn-orange" onclick="importBackup()">Wiederherstellen</button>
+            </div>
+        </div>
+        <button class="action-btn btn-red" onclick="hardReset()">⚠️ App zurücksetzen</button>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="searchInput" class="main-input" placeholder="Suche (z.B. Apple, Gold)...">
+        <button class="control-btn add-btn" onclick="autoSearch()">+</button>
+        <button class="control-btn manual-btn" onclick="manualAdd()">✎</button>
+    </div>
+
+    <div id="loading" class="loading">Lade Daten...</div>
+    <div id="list"></div>
+
+<script>
+    window.onerror = function(msg, url, line) {
+        alert("App Fehler:\n" + msg + "\nZeile: " + line);
+        return false;
+    };
+</script>
+
+<script>
+    // --- STATE ---
+    let assets = [];
+    try {
+        assets = JSON.parse(localStorage.getItem('ultimateAssets')) || [];
+    } catch(e) { assets = []; }
+    
+    let apiKey = localStorage.getItem('finnhubKey') || '';
+    let stealth = localStorage.getItem('stealthMode') === 'true';
+    let currency = localStorage.getItem('appCurrency') || 'USD'; 
+    let prices = {};
+    let conversionRate = 1; 
+
+    const KNOWN_STOCKS = ['apple', 'tesla', 'microsoft', 'amazon', 'google', 'meta', 'netflix', 'nvidia', 'aapl', 'tsla', 'msft', 'amzn', 'googl', 'fb', 'nflx', 'nvda'];
+    const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple'];
+    const COMMODITIES = { 'gold': 'pax-gold', 'silber': 'kinesis-silver', 'silver': 'kinesis-silver', 'öl': 'tether-oil', 'oil': 'tether-oil' };
+
+    const els = {
+        list: document.getElementById('list'),
+        total: document.getElementById('totalDisplay'),
+        eye: document.getElementById('eyeIcon'),
+        load: document.getElementById('loading'),
+        input: document.getElementById('searchInput'),
+        settings: document.getElementById('settingsPanel'),
+        keyInput: document.getElementById('apiKeyInput'),
+        backup: document.getElementById('backupOutput'),
+        import: document.getElementById('importInput'),
+        currency: document.getElementById('currencySelector')
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Init UI immediately
+        if(apiKey) els.keyInput.value = apiKey;
+        els.currency.value = currency; 
+        
+        render(); // Render FIRST, fetch later
+        
+        refreshPrices(); 
+        setInterval(refreshPrices, 60000);
+        els.input.addEventListener("keypress", (e) => { if (e.key === "Enter") autoSearch(); });
+    });
+
+    // --- LOGIC ---
+    function changeCurrency() {
+        currency = els.currency.value;
+        localStorage.setItem('appCurrency', currency);
+        render(); // Update UI immediately
+        fetchExchangeRate().then(() => render()); // Update with accurate rate
+    }
+
+    async function fetchExchangeRate() {
+        try {
+            const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=eur');
+            const data = await res.json();
+            if(data.tether && data.tether.eur) conversionRate = data.tether.eur;
+        } catch(e) { 
+            if(conversionRate === 1) conversionRate = 0.95; 
+        }
+    }
+
+    async function refreshPrices() {
+        fetchExchangeRate();
+
+        if(assets.length === 0) return;
+
+        // 1. KRYPTO & ROHSTOFFE (Preise)
+        const cryptoAssets = assets.filter(a => a.type === 'crypto' || a.type === 'commodity');
+        if(cryptoAssets.length > 0) {
+            let queryIds = [];
+            cryptoAssets.forEach(a => {
+                if(a.type === 'commodity') queryIds.push(COMMODITIES[a.id]);
+                else queryIds.push(a.id);
+            });
+            
+            // Nur fetchen wenn IDs vorhanden
+            if(queryIds.length > 0) {
+                try {
+                    const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${queryIds.join(',')}&vs_currencies=usd`);
+                    const data = await res.json();
+                    
+                    cryptoAssets.forEach(a => {
+                        let apiId = a.type === 'commodity' ? COMMODITIES[a.id] : a.id;
+                        if(data[apiId]) prices[a.id] = data[apiId].usd;
+                    });
+                    
+                    // Hintergrund: Bilder
+                    updateMissingImages(cryptoAssets);
+                } catch(e) {}
+            }
+        }
+
+        render(); // Zwischen-Update
+
+        // 2. AKTIEN (Preise)
+        const stocks = assets.filter(a => a.type === 'stock');
+        if(stocks.length > 0 && apiKey) {
+            for(let stock of stocks) {
+                try {
+                    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.id}&token=${apiKey}`);
+                    const data = await res.json();
+                    if(data.c) prices[stock.id] = data.c;
+                    
+                    // Hintergrund: Bilder (selten)
+                    if(!stock.image && Math.random() < 0.2) fetchStockImage(stock);
+                } catch(e) {}
+                // Kleine Pause für API Limit
+                await new Promise(r => setTimeout(r, 300)); 
+            }
+        }
+        render();
+    }
+
+    // --- IMAGES ---
+    async function updateMissingImages(assetList) {
+        const missing = assetList.filter(a => !a.image);
+        if(missing.length === 0) return;
+        
+        let ids = missing.map(a => a
