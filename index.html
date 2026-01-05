@@ -7,15 +7,14 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v41</title>
+    <title>Asset Tracker v43</title>
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
-            /* NEUE FARBPALETTE FÜR BESSEREN KONTRAST */
             --blue: #0a84ff;   /* Aktie */
-            --green: #30d158;  /* Krypto */
-            --pink: #ff375f;   /* ETF (Neu: Magenta/Pink) */
-            --orange: #ff9f0a; /* Rohstoff (Neu: Orange) */
+            --green: #30d158;  /* Rohstoff */
+            --pink: #ff375f;   /* ETF */
+            --orange: #ff9f0a; /* Krypto */
             --purple: #bf5af2; /* Manuell */
             --red: #ff453a;
         }
@@ -91,7 +90,7 @@
 </div>
 
 <div class="input-group">
-    <input type="text" id="searchInput" class="search-input" placeholder="Suche (Gold, Kupfer, Apple)...">
+    <input type="text" id="searchInput" class="search-input" placeholder="Suche (Bitcoin, Gold, Apple)...">
     <button class="icon-btn" onclick="startSearch()">🔍</button>
     <button class="icon-btn" onclick="manualAdd()">✎</button>
 </div>
@@ -102,13 +101,25 @@
 
 <script>
     // --- DATENBANK ---
+    // Hier verwenden wir jetzt die KORREKTEN API-IDs für Krypto (bitcoin statt btc)
     const TOP_ASSETS = [
+        // KRYPTO (Gefixed)
+        { n: "Bitcoin (BTC)", s: "bitcoin", t: "crypto" },
+        { n: "Ethereum (ETH)", s: "ethereum", t: "crypto" },
+        { n: "Solana (SOL)", s: "solana", t: "crypto" },
+        { n: "XRP (Ripple)", s: "ripple", t: "crypto" },
+        { n: "Cardano (ADA)", s: "cardano", t: "crypto" },
+        { n: "Binance Coin (BNB)", s: "binancecoin", t: "crypto" },
+        { n: "Polkadot (DOT)", s: "polkadot", t: "crypto" },
+        { n: "Dogecoin (DOGE)", s: "dogecoin", t: "crypto" },
+
         // ROHSTOFFE
         { n: "Gold (Unze)", s: "tether-gold", t: "comm" },
         { n: "Silber (Unze)", s: "kinesis-silver", t: "comm" },
         { n: "Kupfer (Index ETF)", s: "CPER", t: "etf" }, 
         { n: "Öl (Brent ETF)", s: "BNO", t: "etf" },
         { n: "Öl (WTI ETF)", s: "USO", t: "etf" },
+
         // US TECH
         { n: "Apple Inc.", s: "AAPL", t: "stock" },
         { n: "Microsoft", s: "MSFT", t: "stock" },
@@ -139,7 +150,12 @@
         { n: "Deutsche Bank", s: "DBK.DE", t: "stock" }
     ];
 
-    const CRYPTO_LIST = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'dot', 'shib', 'matic', 'link', 'xlm'];
+    // ÜBERSETZER: Kürzel -> API-ID
+    const CRYPTO_RESOLVER = {
+        'btc': 'bitcoin', 'eth': 'ethereum', 'sol': 'solana', 'dot': 'polkadot',
+        'matic': 'matic-network', 'ada': 'cardano', 'xrp': 'ripple',
+        'bnb': 'binancecoin', 'doge': 'dogecoin', 'link': 'chainlink'
+    };
 
     // --- STATE ---
     let assets = JSON.parse(localStorage.getItem('ultimateAssets')) || [];
@@ -174,15 +190,16 @@
             if (item.n.toLowerCase().includes(q) || item.s.toLowerCase() === q) options.push(item);
         });
 
-        // 2. Aliase
-        if (q === 'gold' && !options.find(o => o.s === 'tether-gold')) options.push(TOP_ASSETS[0]);
-        if ((q === 'silber'||q==='silver') && !options.find(o => o.s === 'kinesis-silver')) options.push(TOP_ASSETS[1]);
-        if ((q === 'kupfer'||q==='copper') && !options.find(o => o.s === 'CPER')) options.push(TOP_ASSETS[2]);
+        // 2. Krypto Resolver (z.B. user tippt "btc")
+        if (CRYPTO_RESOLVER[q]) {
+            options.push({ n: q.toUpperCase(), s: CRYPTO_RESOLVER[q], t: 'crypto' });
+        }
+        // Oder user tippt "bitcoin"
+        else if (Object.values(CRYPTO_RESOLVER).includes(q)) {
+            options.push({ n: q.charAt(0).toUpperCase()+q.slice(1), s: q, t: 'crypto' });
+        }
 
-        // 3. Krypto
-        if (CRYPTO_LIST.includes(q)) options.push({ n: q.toUpperCase(), s: q, t: 'crypto' });
-
-        // 4. API
+        // 3. API
         if (apiKey && options.length < 3) {
             document.getElementById('loading').style.display = 'block';
             try {
@@ -207,11 +224,10 @@
             const btn = document.createElement('div');
             btn.className = 'select-btn';
             
-            // Neue Farben für die Suche
             let color = 'var(--blue)'; let txt = 'AKTIE';
             if(opt.t==='etf') { color='var(--pink)'; txt='ETF'; }
-            if(opt.t==='crypto') { color='var(--green)'; txt='KRYPTO'; }
-            if(opt.t==='comm') { color='var(--orange)'; txt='ROHSTOFF'; }
+            if(opt.t==='crypto') { color='var(--orange)'; txt='KRYPTO'; }
+            if(opt.t==='comm') { color='var(--green)'; txt='ROHSTOFF'; }
 
             btn.innerHTML = `
                 <div><strong>${opt.n}</strong><br><span style="font-size:0.7rem; opacity:0.7">${opt.s}</span></div>
@@ -277,11 +293,10 @@
             let val = a.amount * p * rate;
             if (a.active) total += val;
 
-            // Neue Farbenzuordnung
             let colorVar = 'blue'; let txt = 'AKTIE';
             if(a.type==='etf') { colorVar='pink'; txt='ETF'; }
-            if(a.type==='crypto') { colorVar='green'; txt='KRYPTO'; }
-            if(a.type==='comm') { colorVar='orange'; txt='ROHSTOFF'; }
+            if(a.type==='crypto') { colorVar='orange'; txt='KRYPTO'; }
+            if(a.type==='comm') { colorVar='green'; txt='ROHSTOFF'; }
             if(a.type==='manual') { colorVar='purple'; txt='MANUELL'; }
 
             const blur = stealth ? 'blur' : '';
