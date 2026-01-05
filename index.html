@@ -7,11 +7,17 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v40</title>
+    <title>Asset Tracker v42</title>
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
-            --blue: #0a84ff; --green: #30d158; --teal: #30b0c7; --gold: #ffd700; --purple: #bf5af2; --red: #ff453a;
+            /* FARBPALETTE */
+            --blue: #0a84ff;   /* Aktie */
+            --green: #30d158;  /* Rohstoff (Neu: Grün) */
+            --pink: #ff375f;   /* ETF */
+            --orange: #ff9f0a; /* Krypto (Neu: Orange) */
+            --purple: #bf5af2; /* Manuell */
+            --red: #ff453a;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px 20px 120px 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
         
@@ -40,7 +46,7 @@
         .asset-info { display: flex; align-items: center; gap: 10px; }
         .checkbox { width: 22px; height: 22px; accent-color: var(--blue); }
         .name { font-weight: bold; font-size: 1.1rem; display: block; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 700; }
         
         .val { font-size: 1.1rem; font-weight: 600; }
         .sub { font-size: 0.85rem; color: #888; }
@@ -85,7 +91,7 @@
 </div>
 
 <div class="input-group">
-    <input type="text" id="searchInput" class="search-input" placeholder="Suche (Gold, Kupfer, Apple)...">
+    <input type="text" id="searchInput" class="search-input" placeholder="Suche (Apple, Bitcoin, Gold)...">
     <button class="icon-btn" onclick="startSearch()">🔍</button>
     <button class="icon-btn" onclick="manualAdd()">✎</button>
 </div>
@@ -95,15 +101,14 @@
 <div id="assetList"></div>
 
 <script>
-    // --- DATENBANK (Top 100 + Rohstoffe Fix) ---
+    // --- DATENBANK ---
     const TOP_ASSETS = [
-        // ROHSTOFFE (WICHTIG: Korrekte Namen für Anzeige)
+        // ROHSTOFFE
         { n: "Gold (Unze)", s: "tether-gold", t: "comm" },
         { n: "Silber (Unze)", s: "kinesis-silver", t: "comm" },
-        { n: "Kupfer (Index ETF)", s: "CPER", t: "etf" }, // ETF als Proxy für Kupfer
+        { n: "Kupfer (Index ETF)", s: "CPER", t: "etf" }, 
         { n: "Öl (Brent ETF)", s: "BNO", t: "etf" },
         { n: "Öl (WTI ETF)", s: "USO", t: "etf" },
-
         // US TECH
         { n: "Apple Inc.", s: "AAPL", t: "stock" },
         { n: "Microsoft", s: "MSFT", t: "stock" },
@@ -150,185 +155,4 @@
         document.getElementById('currencySelector').value = currency;
         renderList();
         refreshPrices();
-        setInterval(refreshPrices, 60000);
-        document.getElementById('searchInput').addEventListener("keypress", (e) => { if (e.key === "Enter") startSearch(); });
-    });
-
-    // --- SUCHE ---
-    async function startSearch() {
-        const inp = document.getElementById('searchInput');
-        const area = document.getElementById('selectionArea');
-        const q = inp.value.trim().toLowerCase();
-        
-        if (!q) return;
-        area.innerHTML = ''; area.style.display = 'none';
-        const options = [];
-
-        // 1. Lokale DB (inkl. Kupfer/Gold Fix)
-        TOP_ASSETS.forEach(item => {
-            if (item.n.toLowerCase().includes(q) || item.s.toLowerCase() === q) options.push(item);
-        });
-
-        // 2. Aliase
-        if (q === 'gold' && !options.find(o => o.s === 'tether-gold')) options.push(TOP_ASSETS[0]);
-        if ((q === 'silber'||q==='silver') && !options.find(o => o.s === 'kinesis-silver')) options.push(TOP_ASSETS[1]);
-        if ((q === 'kupfer'||q==='copper') && !options.find(o => o.s === 'CPER')) options.push(TOP_ASSETS[2]);
-
-        // 3. Krypto
-        if (CRYPTO_LIST.includes(q)) options.push({ n: q.toUpperCase(), s: q, t: 'crypto' });
-
-        // 4. API (nur wenn noch keine Treffer in der DB)
-        if (apiKey && options.length < 3) {
-            document.getElementById('loading').style.display = 'block';
-            try {
-                const res = await fetch(`https://finnhub.io/api/v1/search?q=${q}&token=${apiKey}`);
-                const data = await res.json();
-                if (data.result) {
-                    data.result.slice(0, 3).forEach(r => {
-                        if (!r.symbol.includes('.')) { 
-                            let type = (r.description.includes('ETF') || r.description.includes('TRUST')) ? 'etf' : 'stock';
-                            if (!options.find(o => o.s === r.symbol)) options.push({ n: r.description, s: r.symbol, t: type });
-                        }
-                    });
-                }
-            } catch(e) {}
-            document.getElementById('loading').style.display = 'none';
-        }
-
-        if (options.length === 0) return alert("Nichts gefunden.");
-
-        area.style.display = 'flex';
-        options.forEach(opt => {
-            const btn = document.createElement('div');
-            btn.className = 'select-btn';
-            
-            let color = 'var(--blue)'; let txt = 'AKTIE';
-            if(opt.t==='etf') { color='var(--teal)'; txt='ETF'; }
-            if(opt.t==='crypto') { color='var(--green)'; txt='KRYPTO'; }
-            if(opt.t==='comm') { color='var(--gold)'; txt='ROHSTOFF'; }
-
-            btn.innerHTML = `
-                <div><strong>${opt.n}</strong><br><span style="font-size:0.7rem; opacity:0.7">${opt.s}</span></div>
-                <div class="tag" style="color:${color}; border:1px solid ${color}">${txt}</div>
-            `;
-            btn.onclick = () => {
-                addAsset(opt.s, opt.t, opt.n);
-                area.innerHTML = ''; area.style.display = 'none'; inp.value = '';
-            };
-            area.appendChild(btn);
-        });
-    }
-
-    function addAsset(id, type, name) {
-        if (assets.find(a => a.id === id)) return alert("Schon vorhanden!");
-        assets.push({ id, type, name, amount: 0, manualPrice: 0, active: true });
-        save(); renderList(); refreshPrices();
-    }
-
-    async function refreshPrices() {
-        if (assets.length === 0) return;
-
-        try {
-            const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=eur');
-            const d = await res.json();
-            if (d.tether.eur) eurRate = d.tether.eur;
-        } catch(e) {}
-
-        // Krypto & ROHSTOFFE (CoinGecko)
-        // Wir holen Gold/Silber hier mit
-        let cgIds = assets.filter(a => a.type === 'crypto' || a.type === 'comm').map(a => a.id);
-        if (cgIds.length > 0) {
-            try {
-                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgIds.join(',')}&vs_currencies=usd`);
-                const d = await res.json();
-                for (let k in d) prices[k] = d[k].usd;
-            } catch(e) {}
-        }
-
-        // Aktien/ETF (Finnhub)
-        // Kupfer (CPER) wird hier als ETF behandelt und geladen
-        const stocks = assets.filter(a => a.type === 'stock' || a.type === 'etf');
-        if (stocks.length > 0 && apiKey) {
-            for (let s of stocks) {
-                try {
-                    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.id}&token=${apiKey}`);
-                    const d = await res.json();
-                    if (d.c) prices[s.id] = d.c;
-                    await new Promise(r => setTimeout(r, 200)); 
-                } catch(e) {}
-            }
-        }
-        renderList();
-    }
-
-    function renderList() {
-        const list = document.getElementById('assetList');
-        list.innerHTML = '';
-        let total = 0;
-        const sym = currency === 'USD' ? '$' : '€';
-        const rate = currency === 'USD' ? 1 : eurRate;
-
-        assets.forEach((a, i) => {
-            let p = (a.type === 'manual') ? a.manualPrice : (prices[a.id] || 0);
-            let val = a.amount * p * rate;
-            if (a.active) total += val;
-
-            let badgeClass = 'badge-stock'; let txt = 'AKTIE';
-            if(a.type==='etf') { badgeClass='badge-etf'; txt='ETF'; }
-            if(a.type==='crypto') { badgeClass='badge-crypto'; txt='KRYPTO'; }
-            if(a.type==='comm') { badgeClass='badge-commo'; txt='ROHSTOFF'; }
-            if(a.type==='manual') { badgeClass='badge-manual'; txt='MANUELL'; }
-
-            const blur = stealth ? 'blur' : '';
-            
-            list.innerHTML += `
-            <div class="asset-card ${a.active?'':'inactive'}">
-                <div class="row">
-                    <div class="asset-info">
-                        <input type="checkbox" class="checkbox" ${a.active?'checked':''} onchange="toggleActive(${i})">
-                        <div>
-                            <span class="name">${a.name}</span>
-                            <span class="badge ${badgeClass}" style="background:var(--${badgeClass.split('-')[1]})22; color:var(--${badgeClass.split('-')[1]})">${txt}</span>
-                        </div>
-                    </div>
-                    <div style="text-align:right">
-                        <div class="val ${blur}">${sym}${val.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-                        <div class="sub">${(p*rate).toLocaleString(undefined,{maximumFractionDigits:2})} ${sym}</div>
-                    </div>
-                </div>
-                <div class="controls">
-                    <input type="number" class="small-input" value="${a.amount}" onchange="updateAmount(${i}, this.value)" placeholder="Menge">
-                    ${a.type==='manual' ? `<input type="number" class="small-input" value="${a.manualPrice}" onchange="updatePrice(${i}, this.value)" placeholder="$">` : ''}
-                    <button class="del-btn" onclick="removeAsset(${i})">🗑️</button>
-                </div>
-            </div>`;
-        });
-
-        const tEl = document.getElementById('totalDisplay');
-        tEl.innerText = sym + total.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
-        if(stealth) tEl.classList.add('blur'); else tEl.classList.remove('blur');
-    }
-
-    function updateAmount(i, v) { assets[i].amount = parseFloat(v) || 0; save(); renderList(); }
-    function updatePrice(i, v) { assets[i].manualPrice = parseFloat(v) || 0; save(); renderList(); }
-    function toggleActive(i) { assets[i].active = !assets[i].active; save(); renderList(); }
-    function removeAsset(i) { if(confirm('Löschen?')) { assets.splice(i, 1); save(); renderList(); } }
-    function toggleStealth() { stealth = !stealth; localStorage.setItem('stealthMode', stealth); renderList(); }
-    function toggleSettings() { const el = document.getElementById('settingsPanel'); el.style.display = el.style.display==='block'?'none':'block'; }
-    function saveSettings() { apiKey = document.getElementById('apiKeyInput').value.trim(); currency = document.getElementById('currencySelector').value; localStorage.setItem('finnhubKey', apiKey); localStorage.setItem('appCurrency', currency); alert('Gespeichert'); refreshPrices(); toggleSettings(); }
-    function hardReset() { if(confirm('Alles löschen?')) { localStorage.clear(); location.reload(); } }
-    function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
-    
-    async function manualAdd() {
-        const n = prompt("Name:"); if(!n) return;
-        const p = parseFloat(prompt("Preis ($):")||0);
-        addAsset(n, 'manual', n);
-        assets[assets.length-1].manualPrice = p;
-        save(); renderList();
-    }
-    
-    function copyBackup() { document.getElementById('backupOutput').value = JSON.stringify({assets, apiKey, currency}); document.getElementById('backupOutput').select(); document.execCommand('copy'); alert('Kopiert'); }
-    function importBackup() { try { const d = JSON.parse(document.getElementById('importInput').value); if(d.assets) { assets=d.assets; apiKey=d.apiKey; currency=d.currency; save(); location.reload(); } } catch(e){ alert('Fehler'); } }
-</script>
-</body>
-</html>
+        setInterval(refreshPrices,
