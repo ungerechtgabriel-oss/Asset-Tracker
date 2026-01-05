@@ -10,7 +10,7 @@
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
 
-    <title>Asset Tracker v34 (Stable)</title>
+    <title>Asset Tracker v36</title>
     <style>
         :root {
             --bg-color: #000000;
@@ -37,89 +37,44 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Notfall-Anzeige */
-        #error-log {
-            display: none; color: #ff453a; font-family: monospace; font-size: 0.8rem; text-align: center; margin-bottom: 20px; border: 1px solid #ff453a; padding: 10px; border-radius: 8px;
-        }
+        #error-log { display: none; color: #ff453a; font-family: monospace; font-size: 0.8rem; text-align: center; margin-bottom: 20px; border: 1px solid #ff453a; padding: 10px; border-radius: 8px; }
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-top: 10px;
-            position: relative; z-index: 2;
-        }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-top: 10px; position: relative; z-index: 2; }
 
         .total-container { flex: 1; }
-        .total-balance {
-            font-size: 2.5rem; font-weight: 800; margin: 5px 0; cursor: pointer; transition: all 0.3s ease;
-        }
+        .total-balance { font-size: 2.5rem; font-weight: 800; margin: 5px 0; cursor: pointer; transition: all 0.3s ease; }
 
-        .settings-btn {
-            background: rgba(255,255,255,0.15); border: none; color: white; padding: 0;
-            border-radius: 50%; font-size: 1.2rem; cursor: pointer; width: 40px; height: 40px;
-            display: flex; align-items: center; justify-content: center;
-        }
+        .settings-btn { background: rgba(255,255,255,0.15); border: none; color: white; padding: 0; border-radius: 50%; font-size: 1.2rem; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 
-        /* Z-Index Fix: Settings immer über allem */
-        #settingsPanel {
-            background: #2c2c2e; padding: 20px; border-radius: 16px; margin-bottom: 25px;
-            display: none; border: 1px solid #444; position: relative; z-index: 9999;
-        }
-
+        #settingsPanel { background: #2c2c2e; padding: 20px; border-radius: 16px; margin-bottom: 25px; display: none; border: 1px solid #444; position: relative; z-index: 9999; }
         .settings-section { margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 20px; }
         .settings-section:last-child { border: none; margin: 0; padding: 0; }
-        
         h3 { margin: 0 0 10px 0; color: var(--accent); font-size: 0.9rem; text-transform: uppercase; }
-        
-        input[type="text"], textarea, select {
-            width: 100%; box-sizing: border-box; background: #000; border: 1px solid #444;
-            color: white; padding: 10px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 10px; font-family: inherit;
-        }
+        input[type="text"], textarea, select { width: 100%; box-sizing: border-box; background: #000; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 10px; font-family: inherit; }
+        button.action-btn { width: 100%; padding: 10px; border-radius: 8px; border: none; color: white; font-weight: 600; cursor: pointer; margin-top: 5px; }
+        .btn-green { background: var(--green); } .btn-blue { background: var(--accent); } .btn-orange { background: var(--orange); } .btn-red { background: var(--red); margin-top:20px; }
 
-        button.action-btn {
-            width: 100%; padding: 10px; border-radius: 8px; border: none; color: white;
-            font-weight: 600; cursor: pointer; margin-top: 5px;
-        }
-        .btn-green { background: var(--green); }
-        .btn-blue { background: var(--accent); }
-        .btn-orange { background: var(--orange); }
-        .btn-red { background: var(--red); margin-top:20px; }
-
-        .input-group {
-            display: flex; gap: 8px; margin-bottom: 20px; position: sticky; top: 10px; z-index: 999;
-        }
-
-        .main-input {
-            flex: 1; background: var(--card-bg); border: 1px solid #333; color: white;
-            padding: 12px; border-radius: 12px; font-size: 1rem; outline: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
-
-        .control-btn {
-            border: none; border-radius: 12px; width: 50px; font-size: 1.5rem;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        }
+        .input-group { display: flex; gap: 8px; margin-bottom: 10px; position: sticky; top: 10px; z-index: 999; }
+        .main-input { flex: 1; background: var(--card-bg); border: 1px solid #333; color: white; padding: 12px; border-radius: 12px; font-size: 1rem; outline: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .control-btn { border: none; border-radius: 12px; width: 50px; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         .add-btn { background: var(--accent); color: white; }
         .manual-btn { background: var(--card-bg); color: var(--purple); border: 1px solid #444; font-size: 1.2rem; }
 
-        .asset-card {
-            background-color: var(--card-bg); padding: 16px; border-radius: 16px;
-            margin-bottom: 12px; transition: opacity 0.3s;
-        }
-        .asset-card.inactive { opacity: 0.4; }
+        /* NEU: SUCH-ERGEBNISSE LISTE */
+        #searchResults { display: none; background: #2c2c2e; border-radius: 12px; margin-bottom: 20px; overflow: hidden; border: 1px solid #444; }
+        .search-result-item { padding: 12px 16px; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-item:active { background: #3a3a3c; }
+        .res-name { font-weight: bold; font-size: 0.95rem; }
+        .res-sym { font-size: 0.8rem; color: #8e8e93; }
+        .res-type { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.1); margin-left: 8px; }
 
+        .asset-card { background-color: var(--card-bg); padding: 16px; border-radius: 16px; margin-bottom: 12px; transition: opacity 0.3s; }
+        .asset-card.inactive { opacity: 0.4; }
         .row { display: flex; justify-content: space-between; align-items: center; }
         .asset-info { display: flex; align-items: center; gap: 10px; }
         .asset-checkbox { width: 22px; height: 22px; accent-color: var(--accent); cursor: pointer; }
-        
-        .asset-name { 
-            font-weight: 700; font-size: 1.1rem; 
-            display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;
-        }
-        
+        .asset-name { font-weight: 700; font-size: 1.1rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
         .asset-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-left: 5px; vertical-align: middle; }
         
         .badge-crypto { background: rgba(48, 209, 88, 0.2); color: var(--green); }
@@ -130,17 +85,9 @@
 
         .asset-val { font-size: 1.1rem; font-weight: 600; transition: filter 0.3s; }
         .asset-sub { font-size: 0.85rem; color: var(--text-muted); }
-
-        .card-controls {
-            margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .small-input {
-            background: #000; border: 1px solid #333; color: white; padding: 8px;
-            border-radius: 6px; width: 80px; text-align: right;
-        }
+        .card-controls { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .small-input { background: #000; border: 1px solid #333; color: white; padding: 8px; border-radius: 6px; width: 80px; text-align: right; }
         .del-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; }
-
         .loading { text-align: center; color: var(--accent); margin-top: 20px; display: none; font-weight: bold; font-size: 0.9rem; }
         .stealth-hint { font-size: 0.7rem; color: #666; }
         .blur-value { filter: blur(12px) !important; opacity: 0.5; user-select: none; pointer-events: none; }
@@ -152,11 +99,8 @@
 
     <header>
         <div class="total-container" onclick="toggleStealth()">
-            <div style="font-size: 0.8rem; color: #888; font-weight: 600;">
-                GESAMTVERMÖGEN <span id="eyeIcon">👁️</span>
-            </div>
+            <div style="font-size: 0.8rem; color: #888; font-weight: 600;">GESAMTVERMÖGEN <span id="eyeIcon">👁️</span></div>
             <div class="total-balance" id="totalDisplay">$0.00</div>
-            <div class="stealth-hint">(Tippen zum Verstecken)</div>
         </div>
         <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
     </header>
@@ -169,7 +113,6 @@
                 <option value="EUR">EUR (€)</option>
             </select>
         </div>
-
         <div class="settings-section">
             <h3>Finnhub API Key</h3>
             <input type="text" id="apiKeyInput" placeholder="Key eingeben...">
@@ -188,148 +131,167 @@
     </div>
 
     <div class="input-group">
-        <input type="text" id="searchInput" class="main-input" placeholder="Suche (z.B. MSCI World, 865985)...">
-        <button class="control-btn add-btn" onclick="autoSearch()">+</button>
+        <input type="text" id="searchInput" class="main-input" placeholder="Suche (Nvidia, Allianz, Gold)...">
+        <button class="control-btn add-btn" onclick="autoSearch()">🔍</button>
         <button class="control-btn manual-btn" onclick="manualAdd()">✎</button>
     </div>
+
+    <div id="searchResults"></div>
 
     <div id="loading" class="loading">Lade Daten...</div>
     <div id="list"></div>
 
-    <script>
-        window.onerror = function(msg, url, line) {
-            const log = document.getElementById('error-log');
-            log.style.display = 'block';
-            log.innerText = "Fehler: " + msg + " (Z" + line + ")";
-            return false;
-        };
-    </script>
-
 <script>
-    // --- STATE ---
+    window.onerror = function(msg, url, line) {
+        document.getElementById('error-log').style.display = 'block';
+        document.getElementById('error-log').innerText = "Fehler: " + msg;
+        return false;
+    };
+
     let assets = [];
     let apiKey = '';
     let stealth = false;
     let currency = 'USD';
     let prices = {};
     let conversionRate = 1;
-    let isUpdating = false; // Schutz gegen doppeltes Laden
+    let isUpdating = false;
 
-    // --- DATENBANKEN ---
-    const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple', 'polkadot', 'link', 'xlm'];
+    const KNOWN_CRYPTO = ['btc', 'eth', 'sol', 'xrp', 'ada', 'bnb', 'doge', 'bitcoin', 'ethereum', 'solana', 'cardano', 'ripple', 'polkadot', 'link', 'xlm', 'matic', 'shib'];
     const COMMODITIES = { 'gold': 'pax-gold', 'silber': 'kinesis-silver', 'silver': 'kinesis-silver', 'öl': 'tether-oil', 'oil': 'tether-oil' };
 
-    // Namen verschönern
-    const TICKER_NAMES = {
-        'URTH': 'iShares MSCI World',
-        'VT': 'Vanguard All-World',
-        'ACWI': 'MSCI ACWI',
-        'IVV': 'iShares S&P 500',
-        'QQQ': 'Invesco Nasdaq 100',
-        'DIA': 'SPDR Dow Jones',
-        'DAX': 'Global X DAX',
-        'FEZ': 'SPDR Euro Stoxx 50',
-        'VGK': 'Vanguard Europe',
-        'IEMG': 'iShares Emerging Mkts',
-        'EEM': 'iShares MSCI EM',
-        'ICLN': 'iShares Clean Energy',
-        'ROBO': 'Robo Global Robotics',
-        'CIBR': 'First Trust CyberSec',
-        'GLD': 'SPDR Gold Shares',
-        'MCHI': 'iShares MSCI China',
-        'INDA': 'iShares MSCI India',
-        'EWJ': 'iShares MSCI Japan',
-        'NDAQ': 'Nasdaq Inc.',
-        'BLK': 'BlackRock Inc.',
-        'COIN': 'Coinbase Global',
-        'AAPL': 'Apple Inc.',
-        'TSLA': 'Tesla Inc.',
-        'AMZN': 'Amazon.com',
-        'MSFT': 'Microsoft Corp.',
-        'GOOGL': 'Alphabet Inc. A',
-        'META': 'Meta Platforms',
-        'NVDA': 'NVIDIA Corp.',
-        'NFLX': 'Netflix Inc.',
-        'PLTR': 'Palantir Tech',
-        'PYPL': 'PayPal Holdings',
-        'MSTR': 'MicroStrategy',
-        'BRK.B': 'Berkshire Hathaway',
-        'KO': 'Coca-Cola Co.',
-        'PEP': 'PepsiCo Inc.',
-        'MCD': 'McDonald\'s',
-        'DIS': 'Walt Disney Co.',
-        'INTC': 'Intel Corp.',
-        'AMD': 'Adv. Micro Devices',
-        'V': 'Visa Inc.',
-        'ALV.DE': 'Allianz SE',
-        'BMW.DE': 'BMW AG',
-        'DTE.DE': 'Deutsche Telekom',
-        'MBG.DE': 'Mercedes-Benz',
-        'SAP.DE': 'SAP SE',
-        'SIE.DE': 'Siemens AG',
-        'VOW3.DE': 'Volkswagen AG',
-        'BAS.DE': 'BASF SE',
-        'BAYN.DE': 'Bayer AG',
-        'ADS.DE': 'Adidas AG',
-        'IFX.DE': 'Infineon Tech',
-        'RHM.DE': 'Rheinmetall AG',
-        'DBK.DE': 'Deutsche Bank',
+    // --- TOP 100 & ETFs (FESTVERDRAHTET) ---
+    // Diese Liste sorgt dafür, dass bekannte Werte sofort und korrekt erkannt werden
+    const DIRECT_MAP = {
+        // TOP 30 US TECH & CO
+        'apple': {s:'AAPL', t:'stock', n:'Apple Inc.'},
+        'microsoft': {s:'MSFT', t:'stock', n:'Microsoft Corp.'},
+        'google': {s:'GOOGL', t:'stock', n:'Alphabet Inc. A'},
+        'alphabet': {s:'GOOGL', t:'stock', n:'Alphabet Inc. A'},
+        'amazon': {s:'AMZN', t:'stock', n:'Amazon.com'},
+        'nvidia': {s:'NVDA', t:'stock', n:'NVIDIA Corp.'},
+        'tesla': {s:'TSLA', t:'stock', n:'Tesla Inc.'},
+        'meta': {s:'META', t:'stock', n:'Meta Platforms'},
+        'facebook': {s:'META', t:'stock', n:'Meta Platforms'},
+        'berkshire': {s:'BRK.B', t:'stock', n:'Berkshire Hathaway'},
+        'tsmc': {s:'TSM', t:'stock', n:'Taiwan Semiconductor'},
+        'tencent': {s:'TCEHY', t:'stock', n:'Tencent Holdings'},
+        'visa': {s:'V', t:'stock', n:'Visa Inc.'},
+        'unitedhealth': {s:'UNH', t:'stock', n:'UnitedHealth Grp'},
+        'j&j': {s:'JNJ', t:'stock', n:'Johnson & Johnson'},
+        'johnson': {s:'JNJ', t:'stock', n:'Johnson & Johnson'},
+        'jpmorgan': {s:'JPM', t:'stock', n:'JPMorgan Chase'},
+        'walmart': {s:'WMT', t:'stock', n:'Walmart Inc.'},
+        'procter': {s:'PG', t:'stock', n:'Procter & Gamble'},
+        'mastercard': {s:'MA', t:'stock', n:'Mastercard Inc.'},
+        'exxon': {s:'XOM', t:'stock', n:'Exxon Mobil'},
+        'lilly': {s:'LLY', t:'stock', n:'Eli Lilly & Co'},
+        'home depot': {s:'HD', t:'stock', n:'Home Depot'},
+        'chevron': {s:'CVX', t:'stock', n:'Chevron Corp'},
+        'merck us': {s:'MRK', t:'stock', n:'Merck & Co (US)'},
+        'abbvie': {s:'ABBV', t:'stock', n:'AbbVie Inc.'},
+        'cocacola': {s:'KO', t:'stock', n:'Coca-Cola Co.'},
+        'pepsi': {s:'PEP', t:'stock', n:'PepsiCo Inc.'},
+        'costco': {s:'COST', t:'stock', n:'Costco Wholesale'},
+        'adobe': {s:'ADBE', t:'stock', n:'Adobe Inc.'},
+        'netflix': {s:'NFLX', t:'stock', n:'Netflix Inc.'},
+        'amd': {s:'AMD', t:'stock', n:'Adv. Micro Devices'},
+        'salesforce': {s:'CRM', t:'stock', n:'Salesforce Inc.'},
+        'intel': {s:'INTC', t:'stock', n:'Intel Corp.'},
+        'qualcomm': {s:'QCOM', t:'stock', n:'Qualcomm Inc.'},
+        'ibm': {s:'IBM', t:'stock', n:'IBM Corp.'},
+        'oracle': {s:'ORCL', t:'stock', n:'Oracle Corp.'},
+        'cisco': {s:'CSCO', t:'stock', n:'Cisco Systems'},
+        'disney': {s:'DIS', t:'stock', n:'Walt Disney Co.'},
+        'nike': {s:'NKE', t:'stock', n:'Nike Inc.'},
+        'mcdonalds': {s:'MCD', t:'stock', n:'McDonald\'s'},
+        'paypal': {s:'PYPL', t:'stock', n:'PayPal Holdings'},
+        'starbucks': {s:'SBUX', t:'stock', n:'Starbucks Corp.'},
+        'palantir': {s:'PLTR', t:'stock', n:'Palantir Tech'},
+        'coinbase': {s:'COIN', t:'stock', n:'Coinbase Global'},
+        'microstrategy': {s:'MSTR', t:'stock', n:'MicroStrategy'},
+        'block': {s:'SQ', t:'stock', n:'Block Inc.'},
+        'uber': {s:'UBER', t:'stock', n:'Uber Tech'},
+        'airbnb': {s:'ABNB', t:'stock', n:'Airbnb Inc.'},
+        'booking': {s:'BKNG', t:'stock', n:'Booking Holdings'},
+        'boeing': {s:'BA', t:'stock', n:'Boeing Co.'},
+        'pfizer': {s:'PFE', t:'stock', n:'Pfizer Inc.'},
+        
+        // DEUTSCHLAND / EUROPA TOP
+        'sap': {s:'SAP', t:'stock', n:'SAP SE'}, // US Listing
+        'sap de': {s:'SAP.DE', t:'stock', n:'SAP SE (DE)'},
+        'siemens': {s:'SIEGY', t:'stock', n:'Siemens AG'},
+        'siemens de': {s:'SIE.DE', t:'stock', n:'Siemens AG (DE)'},
+        'allianz': {s:'ALV.DE', t:'stock', n:'Allianz SE'},
+        'telekom': {s:'DTE.DE', t:'stock', n:'Deutsche Telekom'},
+        'mercedes': {s:'MBG.DE', t:'stock', n:'Mercedes-Benz'},
+        'bmw': {s:'BMW.DE', t:'stock', n:'BMW AG'},
+        'vw': {s:'VOW3.DE', t:'stock', n:'Volkswagen AG'},
+        'volkswagen': {s:'VOW3.DE', t:'stock', n:'Volkswagen AG'},
+        'porsche': {s:'P911.DE', t:'stock', n:'Porsche AG'},
+        'basf': {s:'BAS.DE', t:'stock', n:'BASF SE'},
+        'bayer': {s:'BAYN.DE', t:'stock', n:'Bayer AG'},
+        'adidas': {s:'ADS.DE', t:'stock', n:'Adidas AG'},
+        'infineon': {s:'IFX.DE', t:'stock', n:'Infineon Tech'},
+        'rheinmetall': {s:'RHM.DE', t:'stock', n:'Rheinmetall AG'},
+        'dhl': {s:'DHL.DE', t:'stock', n:'DHL Group'},
+        'deutsche bank': {s:'DBK.DE', t:'stock', n:'Deutsche Bank'},
+        'commerzbank': {s:'CBK.DE', t:'stock', n:'Commerzbank'},
+        'eon': {s:'EOAN.DE', t:'stock', n:'E.ON SE'},
+        'rwe': {s:'RWE.DE', t:'stock', n:'RWE AG'},
+        'airbus': {s:'EADSY', t:'stock', n:'Airbus SE'},
+        'asml': {s:'ASML', t:'stock', n:'ASML Holding'},
+        'novo nordisk': {s:'NVO', t:'stock', n:'Novo Nordisk'},
+        'nestle': {s:'NSRGY', t:'stock', n:'Nestlé SA'},
+        'shell': {s:'SHEL', t:'stock', n:'Shell PLC'},
+        'total': {s:'TTE', t:'stock', n:'TotalEnergies'},
+        'lvmh': {s:'LVMUY', t:'stock', n:'LVMH'},
+        
+        // ETFS
+        'msci world': {s:'URTH', t:'etf', n:'iShares MSCI World'},
+        'all world': {s:'VT', t:'etf', n:'Vanguard All-World'},
+        's&p 500': {s:'IVV', t:'etf', n:'iShares S&P 500'},
+        'nasdaq 100': {s:'QQQ', t:'etf', n:'Invesco Nasdaq 100'},
+        'dax etf': {s:'DAX', t:'etf', n:'Global X DAX'},
+        'emerging markets': {s:'IEMG', t:'etf', n:'iShares Emerging Mkts'},
+        
+        // WKNs (nur ein paar wichtige)
+        '865985': {s:'AAPL', t:'stock', n:'Apple Inc.'},
+        'a1cx3t': {s:'TSLA', t:'stock', n:'Tesla Inc.'},
+        '906866': {s:'AMZN', t:'stock', n:'Amazon.com'},
+        'a0rpwh': {s:'URTH', t:'etf', n:'iShares MSCI World'},
+        'a1jx52': {s:'VT', t:'etf', n:'Vanguard All-World'},
     };
 
-    const WKN_MAP = {
-        'msci world': { s: 'URTH', t: 'etf' }, 'a0rpwh': { s: 'URTH', t: 'etf' }, 'all world': { s: 'VT', t: 'etf' }, 'a1jx52': { s: 'VT', t: 'etf' },
-        'nasdaq 100': { s: 'QQQ', t: 'etf' }, 'qqq': { s: 'QQQ', t: 'etf' }, 's&p 500': { s: 'IVV', t: 'etf' },
-        'dax': { s: 'DAX', t: 'etf' }, 'emerging markets': { s: 'IEMG', t: 'etf' }, 'clean energy': { s: 'ICLN', t: 'etf' },
-        'automation': { s: 'ROBO', t: 'etf' }, 'cyber security': { s: 'CIBR', t: 'etf' }, 'gold etf': { s: 'GLD', t: 'etf' },
-        'nasdaq inc': { s: 'NDAQ', t: 'stock' }, 'blackrock': { s: 'BLK', t: 'stock' }, 'coinbase': { s: 'COIN', t: 'stock' },
-        'apple': { s: 'AAPL', t: 'stock' }, '865985': { s: 'AAPL', t: 'stock' }, 'tesla': { s: 'TSLA', t: 'stock' },
-        'nvidia': { s: 'NVDA', t: 'stock' }, 'microsoft': { s: 'MSFT', t: 'stock' }, 'amazon': { s: 'AMZN', t: 'stock' }, 'google': { s: 'GOOGL', t: 'stock' }
-    };
-
-    const els = {
-        list: document.getElementById('list'),
-        total: document.getElementById('totalDisplay'),
-        eye: document.getElementById('eyeIcon'),
-        load: document.getElementById('loading'),
-        input: document.getElementById('searchInput'),
-        settings: document.getElementById('settingsPanel'),
-        keyInput: document.getElementById('apiKeyInput'),
-        backup: document.getElementById('backupOutput'),
-        import: document.getElementById('importInput'),
-        currency: document.getElementById('currencySelector')
-    };
-
-    // --- INIT ---
     document.addEventListener('DOMContentLoaded', () => {
-        // Safe Load
         try {
             const raw = localStorage.getItem('ultimateAssets');
-            if (raw) {
-                let temp = JSON.parse(raw);
-                // CLEANER: Entferne kaputte Einträge ohne ID
-                assets = temp.filter(a => a && a.id);
-            }
+            if (raw) assets = JSON.parse(raw).filter(a => a && a.id);
         } catch(e) { assets = []; }
 
         apiKey = localStorage.getItem('finnhubKey') || '';
         stealth = localStorage.getItem('stealthMode') === 'true';
         currency = localStorage.getItem('appCurrency') || 'USD';
 
-        if(apiKey) els.keyInput.value = apiKey;
-        els.currency.value = currency; 
+        if(apiKey) document.getElementById('apiKeyInput').value = apiKey;
+        document.getElementById('currencySelector').value = currency;
         
-        render(); // Erst mal anzeigen was wir haben
+        render(); 
         refreshPrices(); 
         setInterval(refreshPrices, 60000);
-        els.input.addEventListener("keypress", (e) => { if (e.key === "Enter") autoSearch(); });
+        
+        // Suche bei Enter
+        document.getElementById('searchInput').addEventListener("keypress", (e) => { 
+            if (e.key === "Enter") autoSearch(); 
+        });
     });
 
     function toggleSettings() {
-        if(els.settings) els.settings.style.display = els.settings.style.display === 'block' ? 'none' : 'block';
+        const el = document.getElementById('settingsPanel');
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
     }
 
     function changeCurrency() {
-        currency = els.currency.value;
+        currency = document.getElementById('currencySelector').value;
         localStorage.setItem('appCurrency', currency);
         showLoading(true, "Wechsle Währung...");
         refreshPrices(); 
@@ -343,71 +305,119 @@
         } catch(e) { if(conversionRate === 1) conversionRate = 0.95; }
     }
 
-    // --- SMART SEARCH ---
+    // --- DIE NEUE SUCHE MIT AUSWAHL ---
     async function autoSearch() {
-        const q = els.input.value.trim().toLowerCase();
+        const input = document.getElementById('searchInput');
+        const resDiv = document.getElementById('searchResults');
+        const q = input.value.trim().toLowerCase();
+        
         if(!q) return;
-
+        resDiv.innerHTML = '';
+        resDiv.style.display = 'none';
         showLoading(true, `Suche "${q}"...`);
-        let found = false;
 
-        try {
-            if (WKN_MAP[q]) {
-                const entry = WKN_MAP[q];
-                const symbol = entry.s || entry; 
-                const type = entry.t || 'stock';
-                if(!apiKey) { alert('API Key fehlt!'); found = false; }
-                else { found = await checkStock(symbol, q.toUpperCase(), type); }
-            }
-            else if (COMMODITIES[q]) { 
-                const prettyName = q.charAt(0).toUpperCase() + q.slice(1);
-                addAsset(q, 'commodity', 0, 0, prettyName); 
-                found = true; 
-            }
-            else if (KNOWN_CRYPTO.includes(q)) { found = await checkCrypto(q); }
-            else {
-                if (apiKey) found = await checkStock(q);
-                if (!found) found = await checkCrypto(q);
-            }
-        } catch (error) { found = false; }
+        // 1. Zuerst die harte Liste checken (für Top 100)
+        if (DIRECT_MAP[q]) {
+            const hit = DIRECT_MAP[q];
+            showResultOptions([{
+                description: hit.n,
+                symbol: hit.s,
+                type: hit.t
+            }]);
+            showLoading(false);
+            return;
+        }
 
+        // 2. Rohstoffe
+        if (COMMODITIES[q]) {
+            const name = q.charAt(0).toUpperCase() + q.slice(1);
+            showResultOptions([{ description: name, symbol: q, type: 'commodity' }]);
+            showLoading(false);
+            return;
+        }
+
+        // 3. Krypto (Einfach)
+        if (KNOWN_CRYPTO.includes(q)) {
+            showResultOptions([{ description: q.toUpperCase(), symbol: q, type: 'crypto' }]);
+            showLoading(false);
+            return;
+        }
+
+        // 4. API Suche (Das ist das neue Feature!)
+        if (apiKey) {
+            try {
+                const res = await fetch(`https://finnhub.io/api/v1/search?q=${q}&token=${apiKey}`);
+                const data = await res.json();
+                
+                if (data.result && data.result.length > 0) {
+                    // Filtere Ergebnisse ohne Punkt (bevorzuge US Stocks, außer explizit gesucht)
+                    // Wir nehmen die Top 5
+                    let topResults = data.result.slice(0, 5);
+                    
+                    // Wir müssen raten, ob es ein ETF ist (einfache Heuristik)
+                    const enhancedResults = topResults.map(r => {
+                        let type = 'stock';
+                        if(r.description.includes('ETF') || r.description.includes('TRUST')) type = 'etf';
+                        return { description: r.description, symbol: r.symbol, type: type };
+                    });
+
+                    showResultOptions(enhancedResults);
+                } else {
+                    // Fallback Krypto
+                    if (q.length <= 5) {
+                        const exists = await checkCrypto(q);
+                        if(exists) showResultOptions([{ description: q.toUpperCase(), symbol: q, type: 'crypto' }]);
+                        else alert("Nichts gefunden.");
+                    } else {
+                        alert("Nichts gefunden.");
+                    }
+                }
+            } catch(e) { alert("Suchfehler"); }
+        } else {
+            alert("Für Aktien-Suche brauchst du den API Key!");
+        }
         showLoading(false);
-        if (found) els.input.value = '';
-        else setTimeout(() => {
-            if(confirm(`"${els.input.value}" nicht gefunden. Manuell anlegen?`)) manualAdd(els.input.value);
-        }, 100);
+    }
+
+    // Zeigt die Ergebnisse als Liste an
+    function showResultOptions(results) {
+        const resDiv = document.getElementById('searchResults');
+        resDiv.innerHTML = '';
+        
+        if (results.length === 0) return;
+
+        results.forEach(res => {
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            div.innerHTML = `
+                <div>
+                    <div class="res-name">${res.description}</div>
+                    <div class="res-sym">${res.symbol}</div>
+                </div>
+                <div class="res-type ${res.type === 'etf' ? 'badge-etf' : 'badge-stock'}" 
+                     style="color:white;">${res.type.toUpperCase()}</div>
+            `;
+            div.onclick = () => {
+                addAsset(res.symbol, res.type, 0, 0, res.description);
+                resDiv.style.display = 'none';
+                resDiv.innerHTML = '';
+                document.getElementById('searchInput').value = '';
+            };
+            resDiv.appendChild(div);
+        });
+        resDiv.style.display = 'block';
     }
 
     async function checkCrypto(query) {
         try {
             const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${query}&vs_currencies=usd`);
             const data = await res.json();
-            if(data[query] && data[query].usd > 0) { 
-                const prettyName = query.charAt(0).toUpperCase() + query.slice(1);
-                addAsset(query, 'crypto', 0, 0, prettyName); 
-                return true; 
-            }
-        } catch(e) {}
-        return false;
-    }
-
-    async function checkStock(query, customName = '', type = 'stock') {
-        if(!apiKey) return false;
-        try {
-            const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${query.toUpperCase()}&token=${apiKey}`);
-            if(quoteRes.ok) {
-                const d = await quoteRes.json();
-                if(d.c > 0) { 
-                    addAsset(query.toUpperCase(), type, 0, 0, customName || query.toUpperCase()); 
-                    return true; 
-                }
-            }
-        } catch(e) {}
-        return false;
+            return (data[query] && data[query].usd > 0);
+        } catch(e) { return false; }
     }
 
     async function manualAdd(prefillName = '') {
-        let name = prefillName || els.input.value.trim();
+        let name = prefillName || document.getElementById('searchInput').value.trim();
         if(!name) name = prompt("Name der Position:");
         if(!name) return;
         
@@ -418,154 +428,3 @@
             if (isEuro) {
                 if (conversionRate === 1) await fetchExchangeRate();
                 price = price / conversionRate;
-            }
-            addAsset(name, 'manual', 1, price, name);
-            els.input.value = '';
-        }
-    }
-
-    function addAsset(id, type, amount = 0, manualPrice = 0, realName = '') {
-        const checkId = id.toLowerCase(); 
-        if(assets.find(a => a.id.toLowerCase() === checkId)) { alert('Bereits in der Liste.'); return; }
-        if(!realName) realName = id.charAt(0).toUpperCase() + id.slice(1);
-        assets.push({ id, type, amount, manualPrice, active: true, name: realName });
-        save(); refreshPrices();
-    }
-
-    // --- REFRESH ---
-    async function refreshPrices() {
-        if(isUpdating) return; // Blockiere doppelten Aufruf
-        isUpdating = true;
-
-        await fetchExchangeRate();
-
-        if(assets.length === 0) { 
-            showLoading(false); 
-            isUpdating = false; 
-            render(); 
-            return; 
-        }
-        
-        // Krypto
-        const cryptoIds = assets.filter(a => a.type === 'crypto').map(a => a.id).join(',');
-        if(cryptoIds) {
-            try {
-                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd`);
-                const data = await res.json();
-                for(let id in data) prices[id] = data[id].usd;
-            } catch(e) {}
-        }
-
-        // Rohstoffe
-        const commoAssets = assets.filter(a => a.type === 'commodity');
-        if(commoAssets.length > 0) {
-            const mapIds = commoAssets.map(a => COMMODITIES[a.id]).join(',');
-            try {
-                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${mapIds}&vs_currencies=usd`);
-                const data = await res.json();
-                commoAssets.forEach(a => {
-                    const apiId = COMMODITIES[a.id];
-                    if(data[apiId]) prices[a.id] = data[apiId].usd;
-                });
-            } catch(e) {}
-        }
-
-        // Aktien & ETFs
-        const stocks = assets.filter(a => a.type === 'stock' || a.type === 'etf');
-        if(stocks.length > 0 && apiKey) {
-            for(let stock of stocks) {
-                try {
-                    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.id}&token=${apiKey}`);
-                    const data = await res.json();
-                    if(data.c) prices[stock.id] = data.c;
-                    await new Promise(r => setTimeout(r, 250)); // Slow down for API
-                } catch(e) {}
-            }
-        }
-        
-        showLoading(false);
-        render();
-        isUpdating = false;
-    }
-
-    function render() {
-        els.list.innerHTML = '';
-        let total = 0;
-        const blur = stealth ? 'blur-value' : '';
-        const symbol = currency === 'USD' ? '$' : '€';
-        const displayFactor = currency === 'USD' ? 1 : conversionRate;
-
-        assets.forEach((asset, idx) => {
-            // SAFETY CHECK: Asset muss valide sein
-            if(!asset || !asset.id) return;
-
-            let basePrice = (asset.type === 'manual') ? asset.manualPrice : (prices[asset.id] || 0);
-            let displayPrice = basePrice * displayFactor;
-            let val = asset.amount * displayPrice;
-            
-            const isActive = (asset.active !== false);
-            if (isActive) total += val;
-            
-            const badgeMap = { 'crypto': 'Krypto', 'stock': 'Aktie', 'manual': 'Manuell', 'commodity': 'Rohstoff', 'etf': 'ETF' };
-            const badgeClass = { 'crypto': 'badge-crypto', 'stock': 'badge-stock', 'manual': 'badge-manual', 'commodity': 'badge-commo', 'etf': 'badge-etf' };
-            const opacityClass = isActive ? '' : 'inactive';
-            const checkedState = isActive ? 'checked' : '';
-            
-            const inputHtml = stealth 
-                ? `<span class="blur-value">HIDDEN</span>` 
-                : `<input type="number" class="small-input" value="${asset.amount}" onchange="updateAsset(${idx}, 'amount', this.value)">`;
-            
-            const manualPriceHtml = (!stealth && asset.type === 'manual') 
-                ? `<input type="number" class="small-input" value="${asset.manualPrice}" onchange="updateAsset(${idx}, 'price', this.value)" placeholder="$ Base">` 
-                : '';
-            
-            // Name Beautifier
-            let displayName = asset.name || asset.id;
-            if (TICKER_NAMES[asset.id]) displayName = TICKER_NAMES[asset.id];
-            else if (!asset.name) displayName = asset.id.charAt(0).toUpperCase() + asset.id.slice(1);
-
-            const html = `
-                <div class="asset-card ${opacityClass}">
-                    <div class="row">
-                        <div class="asset-info">
-                            <input type="checkbox" class="asset-checkbox" ${checkedState} onchange="toggleActive(${idx})">
-                            <div>
-                                <span class="asset-name" title="${displayName}">${displayName}</span>
-                                <span class="asset-badge ${badgeClass[asset.type]}">${badgeMap[asset.type]}</span>
-                            </div>
-                        </div>
-                        <div style="text-align:right">
-                            <div class="asset-val ${blur}">${symbol}${val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                            <div class="asset-sub">${displayPrice.toLocaleString(undefined, {maximumFractionDigits: 2})} ${symbol} / Stk</div>
-                        </div>
-                    </div>
-                    <div class="card-controls">
-                        <div style="display:flex; align-items:center; gap:8px; font-size:0.9rem;">
-                            Menge: ${inputHtml}
-                        </div>
-                        ${manualPriceHtml}
-                        <button class="del-btn" onclick="removeAsset(${idx})">🗑️</button>
-                    </div>
-                </div>`;
-            els.list.innerHTML += html;
-        });
-
-        els.total.innerText = symbol + total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        if(stealth) els.total.classList.add('blur-value'); else els.total.classList.remove('blur-value');
-        els.backup.value = JSON.stringify({ assets, key: apiKey, curr: currency });
-    }
-
-    function updateAsset(idx, field, val) { const num = parseFloat(val) || 0; if(field === 'amount') assets[idx].amount = num; if(field === 'price') assets[idx].manualPrice = num; save(); render(); }
-    function toggleActive(idx) { if (assets[idx].active === undefined) assets[idx].active = true; assets[idx].active = !assets[idx].active; save(); render(); }
-    function removeAsset(idx) { if(confirm('Löschen?')) { assets.splice(idx, 1); save(); render(); } }
-    function toggleStealth() { stealth = !stealth; localStorage.setItem('stealthMode', stealth); updateUI(); render(); }
-    function saveKey() { const k = els.keyInput.value.trim(); if(k) { apiKey = k; localStorage.setItem('finnhubKey', k); alert('Gespeichert!'); refreshPrices(); } }
-    function hardReset() { if(confirm("ALLES löschen?")) { localStorage.clear(); location.reload(); } }
-    function copyBackup() { els.backup.select(); document.execCommand('copy'); alert('Kopiert!'); }
-    function importBackup() { try { const data = JSON.parse(els.import.value); if(data.assets) { assets = data.assets; if(data.key) { apiKey = data.key; localStorage.setItem('finnhubKey', apiKey); } if(data.curr) localStorage.setItem('appCurrency', data.curr); save(); location.reload(); } } catch(e) { alert('Ungültiger Code'); } }
-    function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
-    function updateUI() { els.eye.innerText = stealth ? "🔒" : "👁️"; }
-    function showLoading(show, text) { els.load.style.display = show ? 'block' : 'none'; if(text) els.load.innerText = text; }
-</script>
-</body>
-</html>
