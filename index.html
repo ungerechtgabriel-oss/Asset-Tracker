@@ -7,14 +7,14 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v43</title>
+    <title>Asset Tracker v45</title>
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
             --blue: #0a84ff;   /* Aktie */
-            --green: #30d158;  /* Rohstoff */
+            --green: #30d158;  /* Rohstoff (Grün) */
             --pink: #ff375f;   /* ETF */
-            --orange: #ff9f0a; /* Krypto */
+            --orange: #ff9f0a; /* Krypto (Orange) */
             --purple: #bf5af2; /* Manuell */
             --red: #ff453a;
         }
@@ -90,7 +90,7 @@
 </div>
 
 <div class="input-group">
-    <input type="text" id="searchInput" class="search-input" placeholder="Suche (Bitcoin, Gold, Apple)...">
+    <input type="text" id="searchInput" class="search-input" placeholder="Suche (Siemens, Apple, Gold)...">
     <button class="icon-btn" onclick="startSearch()">🔍</button>
     <button class="icon-btn" onclick="manualAdd()">✎</button>
 </div>
@@ -101,60 +101,142 @@
 
 <script>
     // --- DATENBANK ---
-    // Hier verwenden wir jetzt die KORREKTEN API-IDs für Krypto (bitcoin statt btc)
     const TOP_ASSETS = [
-        // KRYPTO (Gefixed)
-        { n: "Bitcoin (BTC)", s: "bitcoin", t: "crypto" },
-        { n: "Ethereum (ETH)", s: "ethereum", t: "crypto" },
-        { n: "Solana (SOL)", s: "solana", t: "crypto" },
-        { n: "XRP (Ripple)", s: "ripple", t: "crypto" },
-        { n: "Cardano (ADA)", s: "cardano", t: "crypto" },
-        { n: "Binance Coin (BNB)", s: "binancecoin", t: "crypto" },
-        { n: "Polkadot (DOT)", s: "polkadot", t: "crypto" },
-        { n: "Dogecoin (DOGE)", s: "dogecoin", t: "crypto" },
+        // --- DAX 40 KOMPLETT (DEUTSCHLAND) ---
+        { n: "SAP", s: "SAP.DE", t: "stock" },
+        { n: "Siemens", s: "SIE.DE", t: "stock" },
+        { n: "Allianz", s: "ALV.DE", t: "stock" },
+        { n: "Deutsche Telekom", s: "DTE.DE", t: "stock" },
+        { n: "Airbus", s: "AIR.DE", t: "stock" },
+        { n: "Mercedes-Benz", s: "MBG.DE", t: "stock" },
+        { n: "BMW", s: "BMW.DE", t: "stock" },
+        { n: "Volkswagen (VW)", s: "VOW3.DE", t: "stock" },
+        { n: "Münchener Rück", s: "MUV2.DE", t: "stock" },
+        { n: "DHL Group", s: "DHL.DE", t: "stock" },
+        { n: "Infineon", s: "IFX.DE", t: "stock" },
+        { n: "BASF", s: "BAS.DE", t: "stock" },
+        { n: "Bayer", s: "BAYN.DE", t: "stock" },
+        { n: "Rheinmetall", s: "RHM.DE", t: "stock" },
+        { n: "Deutsche Bank", s: "DBK.DE", t: "stock" },
+        { n: "E.ON", s: "EOAN.DE", t: "stock" },
+        { n: "Beiersdorf", s: "BEI.DE", t: "stock" },
+        { n: "RWE", s: "RWE.DE", t: "stock" },
+        { n: "Commerzbank", s: "CBK.DE", t: "stock" },
+        { n: "Adidas", s: "ADS.DE", t: "stock" },
+        { n: "MTU Aero Engines", s: "MTX.DE", t: "stock" },
+        { n: "Daimler Truck", s: "DTG.DE", t: "stock" },
+        { n: "Hannover Rück", s: "HNR1.DE", t: "stock" },
+        { n: "Heidelberg Materials", s: "HEI.DE", t: "stock" },
+        { n: "Continental", s: "CON.DE", t: "stock" },
+        { n: "Henkel", s: "HEN3.DE", t: "stock" },
+        { n: "Porsche Automobil", s: "PAH3.DE", t: "stock" },
+        { n: "Porsche AG", s: "P911.DE", t: "stock" },
+        { n: "Brenntag", s: "BNR.DE", t: "stock" },
+        { n: "Qiagen", s: "QIA.DE", t: "stock" },
+        { n: "Symrise", s: "SY1.DE", t: "stock" },
+        { n: "Sartorius", s: "SRT3.DE", t: "stock" },
+        { n: "Siemens Energy", s: "ENR.DE", t: "stock" },
+        { n: "Fresenius", s: "FRE.DE", t: "stock" },
+        { n: "Vonovia", s: "VNA.DE", t: "stock" },
+        { n: "Zalando", s: "ZAL.DE", t: "stock" },
+        { n: "Covestro", s: "1COV.DE", t: "stock" },
+        { n: "Siemens Healthineers", s: "SHL.DE", t: "stock" },
+        { n: "Merck KGaA", s: "MRK.DE", t: "stock" },
 
-        // ROHSTOFFE
+        // --- US S&P 500 HEAVYWEIGHTS (Top 100+) ---
+        { n: "Apple Inc.", s: "AAPL", t: "stock" },
+        { n: "Microsoft", s: "MSFT", t: "stock" },
+        { n: "Nvidia", s: "NVDA", t: "stock" },
+        { n: "Alphabet (Google)", s: "GOOGL", t: "stock" },
+        { n: "Amazon", s: "AMZN", t: "stock" },
+        { n: "Meta (Facebook)", s: "META", t: "stock" },
+        { n: "Tesla", s: "TSLA", t: "stock" },
+        { n: "Berkshire Hathaway", s: "BRK.B", t: "stock" },
+        { n: "Eli Lilly", s: "LLY", t: "stock" },
+        { n: "Broadcom", s: "AVGO", t: "stock" },
+        { n: "JPMorgan Chase", s: "JPM", t: "stock" },
+        { n: "Visa", s: "V", t: "stock" },
+        { n: "Walmart", s: "WMT", t: "stock" },
+        { n: "Exxon Mobil", s: "XOM", t: "stock" },
+        { n: "Mastercard", s: "MA", t: "stock" },
+        { n: "UnitedHealth", s: "UNH", t: "stock" },
+        { n: "Procter & Gamble", s: "PG", t: "stock" },
+        { n: "Costco", s: "COST", t: "stock" },
+        { n: "Johnson & Johnson", s: "JNJ", t: "stock" },
+        { n: "Home Depot", s: "HD", t: "stock" },
+        { n: "Merck & Co. (US)", s: "MRK", t: "stock" },
+        { n: "AbbVie", s: "ABBV", t: "stock" },
+        { n: "Netflix", s: "NFLX", t: "stock" },
+        { n: "AMD", s: "AMD", t: "stock" },
+        { n: "PepsiCo", s: "PEP", t: "stock" },
+        { n: "Coca-Cola", s: "KO", t: "stock" },
+        { n: "Bank of America", s: "BAC", t: "stock" },
+        { n: "Chevron", s: "CVX", t: "stock" },
+        { n: "Salesforce", s: "CRM", t: "stock" },
+        { n: "Adobe", s: "ADBE", t: "stock" },
+        { n: "Oracle", s: "ORCL", t: "stock" },
+        { n: "Disney", s: "DIS", t: "stock" },
+        { n: "McDonald's", s: "MCD", t: "stock" },
+        { n: "Cisco", s: "CSCO", t: "stock" },
+        { n: "Intel", s: "INTC", t: "stock" },
+        { n: "Qualcomm", s: "QCOM", t: "stock" },
+        { n: "IBM", s: "IBM", t: "stock" },
+        { n: "Uber", s: "UBER", t: "stock" },
+        { n: "PayPal", s: "PYPL", t: "stock" },
+        { n: "Palantir", s: "PLTR", t: "stock" },
+        { n: "Coinbase", s: "COIN", t: "stock" },
+        { n: "MicroStrategy", s: "MSTR", t: "stock" },
+        { n: "Block (Square)", s: "SQ", t: "stock" },
+        { n: "Wells Fargo", s: "WFC", t: "stock" },
+        { n: "Verizon", s: "VZ", t: "stock" },
+        { n: "Philip Morris", s: "PM", t: "stock" },
+        { n: "Comcast", s: "CMCSA", t: "stock" },
+        { n: "Nike", s: "NKE", t: "stock" },
+        { n: "Pfizer", s: "PFE", t: "stock" },
+        { n: "Union Pacific", s: "UNP", t: "stock" },
+        { n: "Texas Instruments", s: "TXN", t: "stock" },
+        { n: "BlackRock", s: "BLK", t: "stock" },
+        { n: "Boeing", s: "BA", t: "stock" },
+        { n: "Goldman Sachs", s: "GS", t: "stock" },
+        { n: "Morgan Stanley", s: "MS", t: "stock" },
+        { n: "Starbucks", s: "SBUX", t: "stock" },
+        { n: "Bristol-Myers Squibb", s: "BMY", t: "stock" },
+        { n: "Caterpillar", s: "CAT", t: "stock" },
+        { n: "AT&T", s: "T", t: "stock" },
+        { n: "General Electric", s: "GE", t: "stock" },
+        { n: "3M", s: "MMM", t: "stock" },
+        { n: "Ford", s: "F", t: "stock" },
+        { n: "General Motors", s: "GM", t: "stock" },
+
+        // --- ROHSTOFFE ---
         { n: "Gold (Unze)", s: "tether-gold", t: "comm" },
         { n: "Silber (Unze)", s: "kinesis-silver", t: "comm" },
         { n: "Kupfer (Index ETF)", s: "CPER", t: "etf" }, 
         { n: "Öl (Brent ETF)", s: "BNO", t: "etf" },
         { n: "Öl (WTI ETF)", s: "USO", t: "etf" },
 
-        // US TECH
-        { n: "Apple Inc.", s: "AAPL", t: "stock" },
-        { n: "Microsoft", s: "MSFT", t: "stock" },
-        { n: "Amazon", s: "AMZN", t: "stock" },
-        { n: "Alphabet (Google)", s: "GOOGL", t: "stock" },
-        { n: "Nvidia", s: "NVDA", t: "stock" },
-        { n: "Tesla", s: "TSLA", t: "stock" },
-        { n: "Meta (Facebook)", s: "META", t: "stock" },
-        { n: "Netflix", s: "NFLX", t: "stock" },
-        // ETFs
+        // --- KRYPTO TOP ---
+        { n: "Bitcoin (BTC)", s: "bitcoin", t: "crypto" },
+        { n: "Ethereum (ETH)", s: "ethereum", t: "crypto" },
+        { n: "Solana (SOL)", s: "solana", t: "crypto" },
+        { n: "XRP", s: "ripple", t: "crypto" },
+        { n: "BNB", s: "binancecoin", t: "crypto" },
+        { n: "Cardano (ADA)", s: "cardano", t: "crypto" },
+        { n: "Dogecoin", s: "dogecoin", t: "crypto" },
+
+        // --- ETFs ---
         { n: "Nasdaq 100 ETF", s: "QQQ", t: "etf" },
         { n: "S&P 500 ETF", s: "IVV", t: "etf" },
         { n: "MSCI World", s: "URTH", t: "etf" },
         { n: "Vanguard All-World", s: "VT", t: "etf" },
         { n: "DAX ETF", s: "DAX", t: "etf" },
-        // FIRMEN
-        { n: "Nasdaq Inc. (Aktie)", s: "NDAQ", t: "stock" },
-        { n: "BlackRock (Firma)", s: "BLK", t: "stock" },
-        { n: "Coinbase (Firma)", s: "COIN", t: "stock" },
-        // DEUTSCHLAND
-        { n: "Allianz", s: "ALV.DE", t: "stock" },
-        { n: "SAP", s: "SAP.DE", t: "stock" },
-        { n: "Siemens", s: "SIE.DE", t: "stock" },
-        { n: "Deutsche Telekom", s: "DTE.DE", t: "stock" },
-        { n: "Mercedes-Benz", s: "MBG.DE", t: "stock" },
-        { n: "VW (Volkswagen)", s: "VOW3.DE", t: "stock" },
-        { n: "Rheinmetall", s: "RHM.DE", t: "stock" },
-        { n: "Deutsche Bank", s: "DBK.DE", t: "stock" }
+        { n: "Emerging Markets", s: "IEMG", t: "etf" },
     ];
 
-    // ÜBERSETZER: Kürzel -> API-ID
     const CRYPTO_RESOLVER = {
         'btc': 'bitcoin', 'eth': 'ethereum', 'sol': 'solana', 'dot': 'polkadot',
         'matic': 'matic-network', 'ada': 'cardano', 'xrp': 'ripple',
-        'bnb': 'binancecoin', 'doge': 'dogecoin', 'link': 'chainlink'
+        'bnb': 'binancecoin', 'doge': 'dogecoin', 'link': 'chainlink', 'shib': 'shiba-inu'
     };
 
     // --- STATE ---
@@ -190,16 +272,14 @@
             if (item.n.toLowerCase().includes(q) || item.s.toLowerCase() === q) options.push(item);
         });
 
-        // 2. Krypto Resolver (z.B. user tippt "btc")
+        // 2. Krypto Resolver
         if (CRYPTO_RESOLVER[q]) {
             options.push({ n: q.toUpperCase(), s: CRYPTO_RESOLVER[q], t: 'crypto' });
-        }
-        // Oder user tippt "bitcoin"
-        else if (Object.values(CRYPTO_RESOLVER).includes(q)) {
+        } else if (Object.values(CRYPTO_RESOLVER).includes(q)) {
             options.push({ n: q.charAt(0).toUpperCase()+q.slice(1), s: q, t: 'crypto' });
         }
 
-        // 3. API
+        // 3. API (Fallback für Nischenwerte)
         if (apiKey && options.length < 3) {
             document.getElementById('loading').style.display = 'block';
             try {
