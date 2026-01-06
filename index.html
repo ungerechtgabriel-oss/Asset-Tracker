@@ -82,6 +82,7 @@
         .text-green { color: var(--green); }
         .text-red { color: var(--red); }
         
+        /* Notfall Reset Button dezent unten */
         #errBox { background: #500; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid red; font-size: 0.9rem; position:relative; z-index:1000; }
         #emergencyBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.3; background: #333; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.6rem; z-index: 9999; border: 1px solid #555; cursor: pointer; }
         #emergencyBtn:hover { opacity: 1; background: red; }
@@ -431,4 +432,59 @@
                         </div>
                     </div>
                     <div style="text-align:right">
-                        <div class="val ${blur}">${displaySym}${displayVal.toLocaleString(undefined,{minimumFractionDigits:2,
+                        <div class="val ${blur}">${displaySym}${displayVal.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                        <div class="sub">${priceStr} ${pnlStr}</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <div class="input-wrapper">
+                        <span class="input-label">Menge</span>
+                        <input type="number" class="small-input" value="${a.amount}" onchange="updateAmount(${i}, this.value)">
+                    </div>
+                    <div class="input-wrapper">
+                        <span class="input-label">Einstiegskurs (€)</span>
+                        <input type="number" class="small-input" value="${a.buyPrice}" onchange="updateBuyPrice(${i}, this.value)">
+                    </div>
+                    ${a.source==='manual' ? `
+                    <div class="input-wrapper">
+                        <span class="input-label">Aktueller Preis (€)</span>
+                        <input type="number" class="small-input" value="${a.manualPrice}" onchange="updatePrice(${i}, this.value)">
+                    </div>` : ''}
+                    <button class="del-btn" onclick="removeAsset(${i})">🗑️</button>
+                </div>
+            </div>`;
+        });
+
+        const tEl = document.getElementById('totalDisplay');
+        const pEl = document.getElementById('totalPnl');
+        tEl.innerText = displaySym + totalVal.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+        
+        let globalProfit = totalVal - totalInvest;
+        let globalProfitP = (totalInvest > 0) ? (globalProfit / totalInvest * 100) : 0;
+        let gpSign = globalProfit >= 0 ? '+' : '';
+        let gpClass = globalProfit >= 0 ? 'text-green' : 'text-red';
+        
+        if (totalInvest > 0) {
+            pEl.innerHTML = `<span class="${gpClass}">${gpSign}${globalProfit.toLocaleString(undefined,{maximumFractionDigits:2})} ${displaySym} (${gpSign}${globalProfitP.toFixed(2)}%)</span>`;
+        } else {
+            pEl.innerHTML = '<span style="color:#666">Keine Kaufdaten</span>';
+        }
+
+        if(stealth) { tEl.classList.add('blur'); pEl.classList.add('blur'); } 
+        else { tEl.classList.remove('blur'); pEl.classList.remove('blur'); }
+
+        renderChart(stats, totalVal);
+    }
+
+    function updateAmount(i, v) { assets[i].amount = parseFloat(v) || 0; save(); renderList(); }
+    function updateBuyPrice(i, v) { assets[i].buyPrice = parseFloat(v) || 0; save(); renderList(); }
+    function updatePrice(i, v) { assets[i].manualPrice = parseFloat(v) || 0; save(); renderList(); }
+    function toggleActive(i) { assets[i].active = !assets[i].active; save(); renderList(); }
+    function removeAsset(i) { if(confirm('Löschen?')) { assets.splice(i, 1); save(); renderList(); } }
+    function toggleStealth() { stealth = !stealth; localStorage.setItem('stealthMode', stealth); renderList(); }
+    function toggleSettings() { const el = document.getElementById('settingsPanel'); el.style.display = el.style.display==='block'?'none':'block'; }
+    function saveSettings() { apiKey = document.getElementById('apiKeyInput').value.trim(); currency = document.getElementById('currencySelector').value; localStorage.setItem('finnhubKey', apiKey); localStorage.setItem('appCurrency', currency); checkApiStatus(); alert('Gespeichert'); refreshPrices(); toggleSettings(); }
+    function hardReset() { if(confirm('Alles löschen?')) { localStorage.clear(); location.reload(); } }
+    function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
+    function copyBackup() { document.getElementById('backupOutput').value = JSON.stringify({assets, apiKey, currency}); document.getElementById('backupOutput').select(); document.execCommand('copy'); alert('Kopiert'); }
+    function importBackup() { try { const d = JSON.parse(document.getElementById('importInput').value); if(d.assets) { assets=d.assets; apiKey=d.apiKey; currency=d.currency; save(); location.reload(); } } catch(e){ alert('Fehler'); } }</script></body></html>
