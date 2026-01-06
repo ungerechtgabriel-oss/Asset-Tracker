@@ -5,7 +5,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v50</title>
+    <title>Asset Tracker v50.1</title>
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
@@ -73,11 +73,15 @@
         .text-green { color: var(--green); }
         .text-red { color: var(--red); }
         
-        #errBox { background: #500; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid red; font-size: 0.9rem; }
+        #errBox { background: #500; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid red; font-size: 0.9rem; position:relative; z-index:1000; }
+        
+        /* Emergency Reset Button */
+        #emergencyBtn { position: fixed; bottom: 10px; right: 10px; background: rgba(255,0,0,0.5); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; z-index: 9999; border: 1px solid red; cursor: pointer; }
     </style></head><body>
     <div id="errBox"></div>
+    <div id="emergencyBtn" onclick="hardReset()">Notfall Reset</div>
     
-    <div id="manualModal" class="modal-overlay">
+    <div id="manualModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
             <button class="close-modal" onclick="closeManual()">✕</button>
             <h3 class="modal-title">Manuelles Asset</h3>
@@ -145,10 +149,11 @@
     <input type="text" id="searchInput" class="search-input" placeholder="Suche (Apple, Gold, Bitcoin)...">
     <button class="icon-btn" onclick="startSearch()">🔍</button>
     <button class="icon-btn" onclick="openManual()">+</button></div><div id="selectionArea"></div><div id="loading" class="loading">Lade Preise...</div><div id="assetList"></div><script>
+    // Robust Error Handler
     window.onerror = function(msg, url, line) {
         const d = document.getElementById('errBox');
         d.style.display = 'block';
-        d.innerHTML = `⚠️ Fehler: ${msg}<br>Zeile: ${line} <br><button onclick="hardReset()" style="margin-top:5px; padding:5px; background:red; color:white; border:none; border-radius:4px;">Notfall Reset</button>`;
+        d.innerHTML = `⚠️ Fehler: ${msg} (Z: ${line}) <br> <small>Falls nichts geht: Notfall Reset unten rechts klicken.</small>`;
         return false;
     };
 
@@ -201,17 +206,31 @@
         let saved = localStorage.getItem('ultimateAssets');
         assets = saved ? JSON.parse(saved) : [];
         if(!Array.isArray(assets)) assets = [];
-        // Migration Safe Check
+        
+        // Deep Clean: Remove nulls and corrupted objects
+        assets = assets.filter(a => a && typeof a === 'object');
+
+        // Migration logic
         assets.forEach(a => { 
             if(typeof a.buyPrice === 'undefined' || isNaN(a.buyPrice)) a.buyPrice = 0;
-            // Migration for old manual assets
+            // Ensure source is set
             if(a.type === 'manual' && !a.source) a.source = 'manual';
             if(!a.source) a.source = 'api';
+            // Ensure name exists
+            if(!a.name) a.name = "Unbekannt";
         });
+        
+        // Save cleaned data immediately to prevent recurring crashes
+        localStorage.setItem('ultimateAssets', JSON.stringify(assets));
+
         apiKey = localStorage.getItem('finnhubKey') || '';
         currency = localStorage.getItem('appCurrency') || 'EUR';
         stealth = localStorage.getItem('stealthMode') === 'true';
-    } catch(e) { console.error(e); assets = []; }
+    } catch(e) { 
+        console.error(e); 
+        assets = []; 
+        document.getElementById('errBox').innerText = "Datenbank korrupt. Reset empfohlen.";
+    }
 
     document.addEventListener("DOMContentLoaded", () => {
         try {
@@ -303,19 +322,16 @@
         
         if(!name) return alert('Name fehlt');
         
-        // Generate pseudo-ID for manual assets to avoid collisions
         const id = name.replace(/\s+/g, '_').toUpperCase() + '_' + Date.now();
         
         addAsset(id, type, name, 'manual');
         
-        // Update the newly created asset values
         const idx = assets.length - 1;
-        assets[idx].amount = 1; // Default amount 1
+        assets[idx].amount = 1; 
         assets[idx].manualPrice = price;
         assets[idx].buyPrice = buy;
         
         save(); renderList(); closeManual();
-        // Clear inputs
         document.getElementById('mName').value = '';
         document.getElementById('mPrice').value = '';
         document.getElementById('mBuy').value = '';
@@ -360,7 +376,6 @@
         let totalVal = 0;
         let totalInvest = 0;
         
-        // Stats for Chart (extended categories)
         let stats = { stock: 0, etf: 0, crypto: 0, comm: 0, estate: 0, cash: 0, art: 0, manual: 0 };
         
         const isUsdView = currency === 'USD';
@@ -390,9 +405,8 @@
                 totalVal += displayVal;
                 totalInvest += isUsdView ? (investInEur / eurRate) : investInEur;
                 
-                // Safe add to stats
                 if(stats[a.type] !== undefined) stats[a.type] += displayVal;
-                else stats['manual'] += displayVal; // Fallback
+                else stats['manual'] += displayVal; 
             }
 
             let priceStr = displayPrice.toLocaleString(undefined,{maximumFractionDigits:2}) + " " + displaySym;
@@ -405,6 +419,110 @@
             let pnlSign = profitInEur >= 0 ? '+' : '';
             let pnlStr = (a.buyPrice > 0 && rawPrice > 0) ? `<span class="pnl-tag ${pnlClass}">${pnlSign}${profitPercent.toFixed(1)}%</span>` : '';
 
-            // Color Mapping
             let colorVar = 'blue'; let txt = 'AKTIE';
-            if(a.type==='etf') {
+            if(a.type==='etf') { colorVar='purple'; txt='ETF'; }
+            if(a.type==='crypto') { colorVar='orange'; txt='KRYPTO'; }
+            if(a.type==='comm') { colorVar='green'; txt='ROHSTOFF'; }
+            if(a.type==='estate') { colorVar='brown'; txt='IMMO'; }
+            if(a.type==='cash') { colorVar='teal'; txt='CASH'; }
+            if(a.type==='art') { colorVar='pink'; txt='KUNST'; }
+            if(a.type==='manual') { colorVar='grey'; txt='SONSTIGES'; }
+
+            const blur = stealth ? 'blur' : '';
+            
+            list.innerHTML += `
+            <div class="asset-card ${a.active?'':'inactive'}">
+                <div class="row">
+                    <div class="asset-info">
+                        <input type="checkbox" class="checkbox" ${a.active?'checked':''} onchange="toggleActive(${i})">
+                        <div>
+                            <span class="name">${a.name}</span>
+                            <span class="badge" style="background:var(--${colorVar})33; color:var(--${colorVar})">${txt}</span>
+                        </div>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="val ${blur}">${displaySym}${displayVal.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                        <div class="sub">${priceStr} ${pnlStr}</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <input type="number" class="small-input" value="${a.amount}" onchange="updateAmount(${i}, this.value)" placeholder="Menge">
+                    <input type="number" class="small-input" value="${a.buyPrice}" onchange="updateBuyPrice(${i}, this.value)" placeholder="Ø Kauf €">
+                    ${a.source==='manual' ? `<input type="number" class="small-input" value="${a.manualPrice}" onchange="updatePrice(${i}, this.value)" placeholder="Preis €">` : ''}
+                    <button class="del-btn" onclick="removeAsset(${i})">🗑️</button>
+                </div>
+            </div>`;
+        });
+
+        const tEl = document.getElementById('totalDisplay');
+        const pEl = document.getElementById('totalPnl');
+        tEl.innerText = displaySym + totalVal.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+        
+        let globalProfit = totalVal - totalInvest;
+        let globalProfitP = (totalInvest > 0) ? (globalProfit / totalInvest * 100) : 0;
+        let gpSign = globalProfit >= 0 ? '+' : '';
+        let gpClass = globalProfit >= 0 ? 'text-green' : 'text-red';
+        
+        if (totalInvest > 0) {
+            pEl.innerHTML = `<span class="${gpClass}">${gpSign}${globalProfit.toLocaleString(undefined,{maximumFractionDigits:2})} ${displaySym} (${gpSign}${globalProfitP.toFixed(2)}%)</span>`;
+        } else {
+            pEl.innerHTML = '<span style="color:#666">Keine Kaufdaten</span>';
+        }
+
+        if(stealth) { tEl.classList.add('blur'); pEl.classList.add('blur'); } 
+        else { tEl.classList.remove('blur'); pEl.classList.remove('blur'); }
+
+        renderChart(stats, totalVal);
+    }
+
+    function renderChart(stats, total) {
+        const cont = document.getElementById('chartContainer');
+        if(total <= 0) { cont.style.display = 'none'; return; }
+        
+        cont.style.display = 'flex';
+        const chart = document.getElementById('donutChart');
+        const legend = document.getElementById('chartLegend');
+        legend.innerHTML = '';
+
+        const colors = { 
+            stock: 'var(--blue)', etf: 'var(--purple)', crypto: 'var(--orange)', comm: 'var(--green)', 
+            estate: 'var(--brown)', cash: 'var(--teal)', art: 'var(--pink)', manual: 'var(--grey)' 
+        };
+        const labels = { 
+            stock: 'Aktien', etf: 'ETFs', crypto: 'Krypto', comm: 'Rohstoffe', 
+            estate: 'Immobilien', cash: 'Cash', art: 'Kunst/Uhr', manual: 'Sonstiges' 
+        };
+        
+        let gradients = [];
+        let start = 0;
+
+        for(let type in stats) {
+            let val = stats[type];
+            if(val > 0) {
+                let p = (val / total) * 100;
+                let end = start + p;
+                gradients.push(`${colors[type]} ${start}% ${end}%`);
+                start = end;
+
+                legend.innerHTML += `
+                <div class="legend-item">
+                    <div><span class="dot" style="background:${colors[type]}"></span>${labels[type]}</div>
+                    <div style="font-weight:bold">${Math.round(p)}%</div>
+                </div>`;
+            }
+        }
+        chart.style.background = `conic-gradient(${gradients.join(', ')})`;
+    }
+
+    function updateAmount(i, v) { assets[i].amount = parseFloat(v) || 0; save(); renderList(); }
+    function updateBuyPrice(i, v) { assets[i].buyPrice = parseFloat(v) || 0; save(); renderList(); }
+    function updatePrice(i, v) { assets[i].manualPrice = parseFloat(v) || 0; save(); renderList(); }
+    function toggleActive(i) { assets[i].active = !assets[i].active; save(); renderList(); }
+    function removeAsset(i) { if(confirm('Löschen?')) { assets.splice(i, 1); save(); renderList(); } }
+    function toggleStealth() { stealth = !stealth; localStorage.setItem('stealthMode', stealth); renderList(); }
+    function toggleSettings() { const el = document.getElementById('settingsPanel'); el.style.display = el.style.display==='block'?'none':'block'; }
+    function saveSettings() { apiKey = document.getElementById('apiKeyInput').value.trim(); currency = document.getElementById('currencySelector').value; localStorage.setItem('finnhubKey', apiKey); localStorage.setItem('appCurrency', currency); checkApiStatus(); alert('Gespeichert'); refreshPrices(); toggleSettings(); }
+    function hardReset() { if(confirm('Alles löschen?')) { localStorage.clear(); location.reload(); } }
+    function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
+    function copyBackup() { document.getElementById('backupOutput').value = JSON.stringify({assets, apiKey, currency}); document.getElementById('backupOutput').select(); document.execCommand('copy'); alert('Kopiert'); }
+    function importBackup() { try { const d = JSON.parse(document.getElementById('importInput').value); if(d.assets) { assets=d.assets; apiKey=d.apiKey; currency=d.currency; save(); location.reload(); } } catch(e){ alert('Fehler'); } }</script></body></html>
