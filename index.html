@@ -5,7 +5,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v50.1</title>
+    <title>Asset Tracker v51</title>
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
@@ -64,9 +64,14 @@
         .sub { font-size: 0.85rem; color: #888; display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
         .pnl-tag { font-size: 0.75rem; font-weight: bold; }
         
-        .controls { margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; display: flex; gap: 8px; align-items: center; }
-        .small-input { background: #000; border: 1px solid #333; color: white; padding: 8px; border-radius: 6px; text-align: right; font-size:14px; flex: 1; min-width: 0; }
-        .del-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 0 5px; }
+        .controls { margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; }
+        
+        /* New Input Wrapper Styles */
+        .input-wrapper { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+        .input-label { font-size: 0.75rem; color: #888; font-weight: 500; margin-left: 2px; }
+        .small-input { background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; text-align: right; font-size:16px; width: 100%; box-sizing: border-box; }
+        
+        .del-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 5px; height: 40px; display: flex; align-items: center; }
         
         .loading { text-align: center; color: var(--blue); margin-top: 20px; display: none; }
         .blur { filter: blur(8px); }
@@ -74,8 +79,6 @@
         .text-red { color: var(--red); }
         
         #errBox { background: #500; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid red; font-size: 0.9rem; position:relative; z-index:1000; }
-        
-        /* Emergency Reset Button */
         #emergencyBtn { position: fixed; bottom: 10px; right: 10px; background: rgba(255,0,0,0.5); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; z-index: 9999; border: 1px solid red; cursor: pointer; }
     </style></head><body>
     <div id="errBox"></div>
@@ -149,7 +152,6 @@
     <input type="text" id="searchInput" class="search-input" placeholder="Suche (Apple, Gold, Bitcoin)...">
     <button class="icon-btn" onclick="startSearch()">🔍</button>
     <button class="icon-btn" onclick="openManual()">+</button></div><div id="selectionArea"></div><div id="loading" class="loading">Lade Preise...</div><div id="assetList"></div><script>
-    // Robust Error Handler
     window.onerror = function(msg, url, line) {
         const d = document.getElementById('errBox');
         d.style.display = 'block';
@@ -206,31 +208,18 @@
         let saved = localStorage.getItem('ultimateAssets');
         assets = saved ? JSON.parse(saved) : [];
         if(!Array.isArray(assets)) assets = [];
-        
-        // Deep Clean: Remove nulls and corrupted objects
         assets = assets.filter(a => a && typeof a === 'object');
-
-        // Migration logic
         assets.forEach(a => { 
             if(typeof a.buyPrice === 'undefined' || isNaN(a.buyPrice)) a.buyPrice = 0;
-            // Ensure source is set
             if(a.type === 'manual' && !a.source) a.source = 'manual';
             if(!a.source) a.source = 'api';
-            // Ensure name exists
             if(!a.name) a.name = "Unbekannt";
         });
-        
-        // Save cleaned data immediately to prevent recurring crashes
         localStorage.setItem('ultimateAssets', JSON.stringify(assets));
-
         apiKey = localStorage.getItem('finnhubKey') || '';
         currency = localStorage.getItem('appCurrency') || 'EUR';
         stealth = localStorage.getItem('stealthMode') === 'true';
-    } catch(e) { 
-        console.error(e); 
-        assets = []; 
-        document.getElementById('errBox').innerText = "Datenbank korrupt. Reset empfohlen.";
-    }
+    } catch(e) { console.error(e); assets = []; document.getElementById('errBox').innerText = "Datenbank korrupt. Reset empfohlen."; }
 
     document.addEventListener("DOMContentLoaded", () => {
         try {
@@ -311,7 +300,6 @@
         save(); renderList(); refreshPrices();
     }
 
-    // Modal Logic
     function openManual() { document.getElementById('manualModal').style.display = 'flex'; }
     function closeManual() { document.getElementById('manualModal').style.display = 'none'; }
     function saveManualAsset() {
@@ -323,9 +311,7 @@
         if(!name) return alert('Name fehlt');
         
         const id = name.replace(/\s+/g, '_').toUpperCase() + '_' + Date.now();
-        
         addAsset(id, type, name, 'manual');
-        
         const idx = assets.length - 1;
         assets[idx].amount = 1; 
         assets[idx].manualPrice = price;
@@ -375,7 +361,6 @@
         
         let totalVal = 0;
         let totalInvest = 0;
-        
         let stats = { stock: 0, etf: 0, crypto: 0, comm: 0, estate: 0, cash: 0, art: 0, manual: 0 };
         
         const isUsdView = currency === 'USD';
@@ -404,7 +389,6 @@
             if (a.active) {
                 totalVal += displayVal;
                 totalInvest += isUsdView ? (investInEur / eurRate) : investInEur;
-                
                 if(stats[a.type] !== undefined) stats[a.type] += displayVal;
                 else stats['manual'] += displayVal; 
             }
@@ -446,9 +430,19 @@
                     </div>
                 </div>
                 <div class="controls">
-                    <input type="number" class="small-input" value="${a.amount}" onchange="updateAmount(${i}, this.value)" placeholder="Menge">
-                    <input type="number" class="small-input" value="${a.buyPrice}" onchange="updateBuyPrice(${i}, this.value)" placeholder="Ø Kauf €">
-                    ${a.source==='manual' ? `<input type="number" class="small-input" value="${a.manualPrice}" onchange="updatePrice(${i}, this.value)" placeholder="Preis €">` : ''}
+                    <div class="input-wrapper">
+                        <span class="input-label">Menge</span>
+                        <input type="number" class="small-input" value="${a.amount}" onchange="updateAmount(${i}, this.value)">
+                    </div>
+                    <div class="input-wrapper">
+                        <span class="input-label">Einstiegskurs (€)</span>
+                        <input type="number" class="small-input" value="${a.buyPrice}" onchange="updateBuyPrice(${i}, this.value)">
+                    </div>
+                    ${a.source==='manual' ? `
+                    <div class="input-wrapper">
+                        <span class="input-label">Aktueller Preis (€)</span>
+                        <input type="number" class="small-input" value="${a.manualPrice}" onchange="updatePrice(${i}, this.value)">
+                    </div>` : ''}
                     <button class="del-btn" onclick="removeAsset(${i})">🗑️</button>
                 </div>
             </div>`;
