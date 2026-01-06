@@ -5,7 +5,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Assets</title> <style>
+    <title>Asset Tracker v51</title>
+    <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
             --blue: #0a84ff; --purple: #bf5af2; --orange: #ff9f0a; --green: #30d158; 
@@ -13,11 +14,7 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px 20px 120px 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
         
-        /* Header & Logo Styles */
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: relative; z-index: 10; }
-        .header-left { display: flex; align-items: center; }
-        .app-logo { width: 60px; height: 60px; margin-right: 15px; border-radius: 50%; box-shadow: 0 4px 12px rgba(255,255,255,0.1); }
-        
         .total-balance { font-size: 2.5rem; font-weight: 800; margin: 5px 0; line-height: 1; }
         .total-pnl { font-size: 1rem; font-weight: 600; margin-top: 5px; opacity: 0.9; }
         .settings-btn { background: rgba(255,255,255,0.15); border: none; color: white; border-radius: 50%; width: 44px; height: 44px; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -68,9 +65,12 @@
         .pnl-tag { font-size: 0.75rem; font-weight: bold; }
         
         .controls { margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; }
+        
+        /* New Input Wrapper Styles */
         .input-wrapper { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
         .input-label { font-size: 0.75rem; color: #888; font-weight: 500; margin-left: 2px; }
         .small-input { background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; text-align: right; font-size:16px; width: 100%; box-sizing: border-box; }
+        
         .del-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 5px; height: 40px; display: flex; align-items: center; }
         
         .loading { text-align: center; color: var(--blue); margin-top: 20px; display: none; }
@@ -114,16 +114,10 @@
     </div>
 
     <header>
-    <div class="header-left">
-        <svg class="app-logo" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-            <circle fill="#000000" cx="256" cy="256" r="256"/>
-            <path fill="#ffffff" d="M256,90c-40,0-100,160-140,330l45,10c30-140,65-260,95-260s65,120,95,260l45-10C356,250,296,90,256,90z M175,350c30-20,81-30,162-20l-5,40c-70-10-120-5-152,10L175,350z"/>
-        </svg>
-        <div>
-            <div style="font-size:0.8rem; color:#888; font-weight:600;">GESAMTVERMÖGEN <span id="eyeIcon" onclick="toggleStealth()">👁️</span></div>
-            <div class="total-balance" id="totalDisplay">€0.00</div>
-            <div class="total-pnl" id="totalPnl">--</div>
-        </div>
+    <div>
+        <div style="font-size:0.8rem; color:#888; font-weight:600;">GESAMTVERMÖGEN <span id="eyeIcon" onclick="toggleStealth()">👁️</span></div>
+        <div class="total-balance" id="totalDisplay">€0.00</div>
+        <div class="total-pnl" id="totalPnl">--</div>
     </div>
     <button class="settings-btn" onclick="toggleSettings()">⚙️</button></header>
     
