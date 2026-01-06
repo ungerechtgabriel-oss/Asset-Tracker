@@ -5,11 +5,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v48.1</title>
+    <title>Asset Tracker v49</title>
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
-            --blue: #0a84ff; --green: #30d158; --teal: #30b0c7; --gold: #ffd700; --purple: #bf5af2; --red: #ff453a; --orange: #ff9f0a;
+            --blue: #0a84ff; --purple: #bf5af2; --orange: #ff9f0a; --green: #30d158; --teal: #30b0c7; --red: #ff453a;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px 20px 120px 20px; user-select: none; -webkit-tap-highlight-color: transparent; }
         
@@ -17,6 +17,14 @@
         .total-balance { font-size: 2.5rem; font-weight: 800; margin: 5px 0; line-height: 1; }
         .total-pnl { font-size: 1rem; font-weight: 600; margin-top: 5px; opacity: 0.9; }
         .settings-btn { background: rgba(255,255,255,0.15); border: none; color: white; border-radius: 50%; width: 44px; height: 44px; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        /* Chart Styles */
+        .chart-container { display: flex; align-items: center; gap: 20px; margin-bottom: 25px; background: var(--card); padding: 15px; border-radius: 16px; }
+        .donut { width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(#333 0% 100%); position: relative; flex-shrink: 0; }
+        .donut::after { content: ""; position: absolute; inset: 12px; background: var(--card); border-radius: 50%; }
+        .legend { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+        .legend-item { display: flex; justify-content: space-between; align-items: center; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 
         #settingsPanel { background: #2c2c2e; padding: 20px; border-radius: 16px; margin-bottom: 25px; display: none; border: 1px solid #444; position: relative; z-index: 100; }
         .section { margin-bottom: 15px; border-bottom: 1px solid #444; padding-bottom: 15px; }
@@ -67,7 +75,14 @@
         <div class="total-balance" id="totalDisplay">€0.00</div>
         <div class="total-pnl" id="totalPnl">--</div>
     </div>
-    <button class="settings-btn" onclick="toggleSettings()">⚙️</button></header><div id="settingsPanel">
+    <button class="settings-btn" onclick="toggleSettings()">⚙️</button></header>
+    
+    <div class="chart-container" id="chartContainer" style="display:none">
+        <div class="donut" id="donutChart"></div>
+        <div class="legend" id="chartLegend"></div>
+    </div>
+
+    <div id="settingsPanel">
     <div class="section">
         <h3>Währung (Anzeige)</h3>
         <p style="font-size:0.8rem; color:#888; margin-top:-10px; margin-bottom:10px;">Eingaben sind immer in Euro (€).</p>
@@ -146,25 +161,17 @@
     let prices = {};
     let eurRate = 1;
 
-    // Safe Initialization
     try {
         let saved = localStorage.getItem('ultimateAssets');
         assets = saved ? JSON.parse(saved) : [];
-        if(!Array.isArray(assets)) assets = []; // Corrupt data fix
-        
-        // Migration Safe Check
+        if(!Array.isArray(assets)) assets = [];
         assets.forEach(a => { 
             if(typeof a.buyPrice === 'undefined' || isNaN(a.buyPrice)) a.buyPrice = 0; 
         });
-
         apiKey = localStorage.getItem('finnhubKey') || '';
         currency = localStorage.getItem('appCurrency') || 'EUR';
         stealth = localStorage.getItem('stealthMode') === 'true';
-    } catch(e) {
-        console.error("Init Error", e);
-        assets = [];
-        alert("Datenbank Fehler erkannt. Startwerte geladen.");
-    }
+    } catch(e) { console.error(e); assets = []; }
 
     document.addEventListener("DOMContentLoaded", () => {
         try {
@@ -175,7 +182,7 @@
             refreshPrices();
             setInterval(refreshPrices, 60000);
             document.getElementById('searchInput').addEventListener("keypress", (e) => { if (e.key === "Enter") startSearch(); });
-        } catch(e) { console.error("DOM Error", e); }
+        } catch(e) { console.error(e); }
     });
 
     function checkApiStatus() {
@@ -284,6 +291,9 @@
         let totalVal = 0;
         let totalInvest = 0;
         
+        // Stats for Chart
+        let stats = { stock: 0, etf: 0, crypto: 0, comm: 0, manual: 0 };
+        
         const isUsdView = currency === 'USD';
         const displaySym = isUsdView ? '$' : '€';
 
@@ -299,7 +309,6 @@
             }
 
             let buyPriceInEur = a.buyPrice || 0;
-
             let valInEur = (a.amount || 0) * priceInEur;
             let investInEur = (a.amount || 0) * buyPriceInEur;
             let profitInEur = valInEur - investInEur;
@@ -311,6 +320,8 @@
             if (a.active) {
                 totalVal += displayVal;
                 totalInvest += isUsdView ? (investInEur / eurRate) : investInEur;
+                // Add to stats (use display value for consistent pie chart)
+                if(stats[a.type] !== undefined) stats[a.type] += displayVal;
             }
 
             let priceStr = displayPrice.toLocaleString(undefined,{maximumFractionDigits:2}) + " " + displaySym;
@@ -355,9 +366,9 @@
             </div>`;
         });
 
+        // Totals
         const tEl = document.getElementById('totalDisplay');
         const pEl = document.getElementById('totalPnl');
-        
         tEl.innerText = displaySym + totalVal.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
         
         let globalProfit = totalVal - totalInvest;
@@ -373,6 +384,43 @@
 
         if(stealth) { tEl.classList.add('blur'); pEl.classList.add('blur'); } 
         else { tEl.classList.remove('blur'); pEl.classList.remove('blur'); }
+
+        renderChart(stats, totalVal);
+    }
+
+    function renderChart(stats, total) {
+        const cont = document.getElementById('chartContainer');
+        if(total <= 0) { cont.style.display = 'none'; return; }
+        
+        cont.style.display = 'flex';
+        const chart = document.getElementById('donutChart');
+        const legend = document.getElementById('chartLegend');
+        legend.innerHTML = '';
+
+        // Colors mapping
+        const colors = { stock: 'var(--blue)', etf: 'var(--purple)', crypto: 'var(--orange)', comm: 'var(--green)', manual: 'var(--teal)' };
+        const labels = { stock: 'Aktien', etf: 'ETFs', crypto: 'Krypto', comm: 'Rohstoffe', manual: 'Manuell' };
+        
+        let gradients = [];
+        let start = 0;
+
+        for(let type in stats) {
+            let val = stats[type];
+            if(val > 0) {
+                let p = (val / total) * 100;
+                let end = start + p;
+                gradients.push(`${colors[type]} ${start}% ${end}%`);
+                start = end;
+
+                // Legend Item
+                legend.innerHTML += `
+                <div class="legend-item">
+                    <div><span class="dot" style="background:${colors[type]}"></span>${labels[type]}</div>
+                    <div style="font-weight:bold">${Math.round(p)}%</div>
+                </div>`;
+            }
+        }
+        chart.style.background = `conic-gradient(${gradients.join(', ')})`;
     }
 
     function updateAmount(i, v) { assets[i].amount = parseFloat(v) || 0; save(); renderList(); }
