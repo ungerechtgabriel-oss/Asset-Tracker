@@ -5,7 +5,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v51</title>
+    <title>Assets</title>
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGZpbGw9IiMwMDAwMDAiIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjI1NiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0yNTYsOTBjLTQwLDAtMTAwLDE2MC0xNDAsMzMwbDQ1LDEwYzMwLTE0MCw2NS0yNjAsOTUtMjYwczY1LDEyMCw5NSwyNjBsNDUtMTBDMzU2LDI1MCwyOTYsOTAsMjU2LDkweiBNMTc1LDM1MGMzMC0yMCw4MS0zMCwxNjItMjBsLTUsNDBjLTcwLTEwLTEyMC01LTE1MiwxMEwxNzUsMzUweiIvPjwvc3ZnPg==">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGZpbGw9IiMwMDAwMDAiIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjI1NiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0yNTYsOTBjLTQwLDAtMTAwLDE2MC0xNDAsMzMwbDQ1LDEwYzMwLTE0MCw2NS0yNjAsOTUtMjYwczY1LDEyMCw5NSwyNjBsNDUtMTBDMzU2LDI1MCwyOTYsOTAsMjU2LDkweiBNMTc1LDM1MGMzMC0yMCw4MS0zMCwxNjItMjBsLTUsNDBjLTcwLTEwLTEyMC01LTE1MiwxMEwxNzUsMzUweiIvPjwvc3ZnPg==">
+
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
@@ -66,7 +70,7 @@
         
         .controls { margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; }
         
-        /* New Input Wrapper Styles */
+        /* Layout für die Inputs mit Label */
         .input-wrapper { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
         .input-label { font-size: 0.75rem; color: #888; font-weight: 500; margin-left: 2px; }
         .small-input { background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; text-align: right; font-size:16px; width: 100%; box-sizing: border-box; }
@@ -78,11 +82,14 @@
         .text-green { color: var(--green); }
         .text-red { color: var(--red); }
         
+        /* Notfall Reset Button dezent unten */
         #errBox { background: #500; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid red; font-size: 0.9rem; position:relative; z-index:1000; }
-        #emergencyBtn { position: fixed; bottom: 10px; right: 10px; background: rgba(255,0,0,0.5); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; z-index: 9999; border: 1px solid red; cursor: pointer; }
+        #emergencyBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.3; background: #333; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.6rem; z-index: 9999; border: 1px solid #555; cursor: pointer; }
+        #emergencyBtn:hover { opacity: 1; background: red; }
     </style></head><body>
+    
     <div id="errBox"></div>
-    <div id="emergencyBtn" onclick="hardReset()">Notfall Reset</div>
+    <div id="emergencyBtn" onclick="if(confirm('Notfall Reset?')){localStorage.clear(); location.reload();}">RESET</div>
     
     <div id="manualModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
@@ -467,45 +474,6 @@
         else { tEl.classList.remove('blur'); pEl.classList.remove('blur'); }
 
         renderChart(stats, totalVal);
-    }
-
-    function renderChart(stats, total) {
-        const cont = document.getElementById('chartContainer');
-        if(total <= 0) { cont.style.display = 'none'; return; }
-        
-        cont.style.display = 'flex';
-        const chart = document.getElementById('donutChart');
-        const legend = document.getElementById('chartLegend');
-        legend.innerHTML = '';
-
-        const colors = { 
-            stock: 'var(--blue)', etf: 'var(--purple)', crypto: 'var(--orange)', comm: 'var(--green)', 
-            estate: 'var(--brown)', cash: 'var(--teal)', art: 'var(--pink)', manual: 'var(--grey)' 
-        };
-        const labels = { 
-            stock: 'Aktien', etf: 'ETFs', crypto: 'Krypto', comm: 'Rohstoffe', 
-            estate: 'Immobilien', cash: 'Cash', art: 'Kunst/Uhr', manual: 'Sonstiges' 
-        };
-        
-        let gradients = [];
-        let start = 0;
-
-        for(let type in stats) {
-            let val = stats[type];
-            if(val > 0) {
-                let p = (val / total) * 100;
-                let end = start + p;
-                gradients.push(`${colors[type]} ${start}% ${end}%`);
-                start = end;
-
-                legend.innerHTML += `
-                <div class="legend-item">
-                    <div><span class="dot" style="background:${colors[type]}"></span>${labels[type]}</div>
-                    <div style="font-weight:bold">${Math.round(p)}%</div>
-                </div>`;
-            }
-        }
-        chart.style.background = `conic-gradient(${gradients.join(', ')})`;
     }
 
     function updateAmount(i, v) { assets[i].amount = parseFloat(v) || 0; save(); renderList(); }
