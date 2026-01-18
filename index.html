@@ -3,206 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Assets</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGZpbGw9IiMwMDAwMDAiIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjI1NiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0yNTYsOTBjLTQwLDAtMTAwLDE2MC0xNDAsMzMwbDQ1LDEwYzMwLTE0MCw2NS0yNjAsOTUtMjYwczY1LDEyMCw5NSwyNjBsNDUtMTBDMzU2LDI1MCwyOTYsOTAsMjU2LDkweiBNMTc1LDM1MGMzMC0yMCw4MS0zMCwxNjItMjBsLTUsNDBjLTcwLTEwLTEyMC01LTE1MiwxMEwxNzUsMzUweiIvPjwvc3ZnPg==">
+    <title>Assets v69</title>
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
             --blue: #0a84ff; --purple: #bf5af2; --orange: #ff9f0a; --green: #30d158; 
             --teal: #30b0c7; --red: #ff453a; --brown: #ac8e68; --pink: #ff375f; --grey: #8e8e93;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; user-select: none; }
-        #errDisplay { background: #500; color: white; padding: 15px; border-radius: 12px; display: none; margin-bottom: 20px; border: 1px solid red; font-size: 0.85rem; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; padding-bottom: 100px; }
         
+        #errDisplay { background: #900; color: white; padding: 15px; border-radius: 10px; display: none; margin-bottom: 20px; border: 2px solid white; position: relative; z-index: 10001; }
+
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .total-balance { font-size: 2.5rem; font-weight: 800; }
-        .settings-btn { background: rgba(255,255,255,0.1); border: none; color: white; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; }
+        .total-balance { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+        .settings-btn { background: rgba(255,255,255,0.15); border: none; color: white; border-radius: 50%; width: 44px; height: 44px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
+        /* Accordion */
         .cat-group { margin-bottom: 12px; }
-        .cat-header { background: #2c2c2e; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #333; }
+        .cat-header { background: #2c2c2e; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #444; }
         .cat-title { font-weight: bold; font-size: 1.1rem; }
-        .cat-content { display: none; padding-top: 5px; }
+        .cat-total { color: #aaa; font-weight: 600; }
+        .cat-content { display: none; padding-top: 10px; }
 
-        .asset-card { background: var(--card); padding: 16px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #222; }
+        /* Cards */
+        .asset-card { background: var(--card); padding: 16px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #333; position: relative; }
         .row { display: flex; justify-content: space-between; align-items: center; }
-        .controls { display: flex; gap: 8px; margin-top: 12px; border-top: 1px solid #333; padding-top: 10px; }
+        .controls { display: flex; gap: 10px; margin-top: 12px; border-top: 1px solid #333; padding-top: 12px; }
         .input-wrapper { flex: 1; }
-        .input-label { font-size: 0.7rem; color: #888; display: block; margin-bottom: 2px; }
-        .small-input { width: 100%; background: #000; border: 1px solid #444; color: white; padding: 8px; border-radius: 6px; box-sizing: border-box; }
+        .input-label { font-size: 0.7rem; color: #888; display: block; margin-bottom: 4px; }
+        .small-input { width: 100%; background: #000; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .del-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; padding: 5px; color: var(--red); }
 
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .modal-box { background: #2c2c2e; padding: 25px; border-radius: 20px; width: 90%; max-width: 340px; border: 1px solid #444; }
-        
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        .search-input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: var(--card); color: white; font-size: 16px; }
-        .btn { padding: 12px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; color: white; width: 100%; font-size: 16px; }
-        .btn-blue { background: var(--blue); } .btn-green { background: var(--green); } .btn-red { background: var(--red); }
-        
-        #selectArea { display: none; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-        .select-btn { background: #2c2c2e; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #444; cursor: pointer; }
+        /* Modals - CRITICAL FIX */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9000; display: none; align-items: center; justify-content: center; pointer-events: none; }
+        .modal-overlay.active { display: flex; pointer-events: auto; }
+        .modal-box { background: #2c2c2e; padding: 25px; border-radius: 20px; width: 85%; max-width: 340px; border: 1px solid #555; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
 
-        #hardResetBtn { position: fixed; bottom: 10px; right: 10px; background: #300; color: #f66; border: 1px solid #600; padding: 8px 12px; border-radius: 8px; z-index: 5000; font-size: 0.65rem; cursor: pointer; }
+        /* Search */
+        .search-container { display: flex; gap: 10px; margin-bottom: 20px; position: sticky; top: 10px; z-index: 100; }
+        .search-input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #444; background: var(--card); color: white; font-size: 16px; }
+        .search-btn { background: var(--card); border: 1px solid #444; color: var(--blue); padding: 0 15px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
+
+        #selectionArea { display: none; flex-direction: column; gap: 8px; margin-bottom: 20px; background: #111; padding: 10px; border-radius: 12px; border: 1px solid #333; }
+        .select-btn { background: #2c2c2e; padding: 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 5px; }
+
+        #hardResetBtn { position: fixed; bottom: 20px; right: 20px; background: red; color: white; border: 2px solid white; padding: 12px 20px; border-radius: 30px; z-index: 9999; font-weight: bold; font-size: 0.8rem; box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; }
         .blur { filter: blur(10px); }
     </style>
 </head>
 <body>
 
     <div id="errDisplay"></div>
-    <button id="hardResetBtn" onclick="if(confirm('Alle Daten löschen?')){localStorage.clear();location.reload();}">NOTFALL RESET</button>
+    <button id="hardResetBtn" onclick="if(confirm('App komplett zurücksetzen?')){localStorage.clear();location.reload();}">NOTFALL RESET</button>
 
     <header>
         <div>
-            <div style="font-size:0.75rem; color:#888; font-weight: 600;">GESAMTVERMÖGEN <span onclick="toggleStealth()" style="cursor:pointer">👁️</span></div>
+            <div style="font-size:0.75rem; color:#888; font-weight:600;">PORTFOLIO <span onclick="toggleStealth()" style="cursor:pointer; padding: 5px;">👁️</span></div>
             <div class="total-balance" id="totalDisplay">€0.00</div>
-            <div id="totalPnl" style="font-size:1rem; margin-top:5px; font-weight: 600;">--</div>
+            <div id="totalPnl" style="font-size:1rem; margin-top:5px;">--</div>
         </div>
         <button class="settings-btn" onclick="toggleSettings()">⚙️</button>
     </header>
 
-    <div id="settingsPanel" style="display:none; background:#2c2c2e; padding:20px; border-radius:16px; margin-bottom:20px; border: 1px solid #444;">
+    <div id="settingsPanel" style="display:none; background:#2c2c2e; padding:20px; border-radius:16px; margin-bottom:20px; border:1px solid #444;">
         <h3 style="margin-top:0">Einstellungen</h3>
-        <label class="input-label">Währung (Anzeige)</label>
-        <select id="curSel" onchange="saveSettings()" style="width:100%; padding:12px; background:#000; color:white; border-radius:8px; border:1px solid #444; margin-bottom:15px;">
+        <label class="input-label">Anzeige-Währung</label>
+        <select id="curSel" onchange="saveSettings()" style="width:100%; padding:12px; background:#000; color:white; border-radius:8px; border:1px solid #444; margin-bottom:15px; font-size:16px;">
             <option value="EUR">EUR (€)</option><option value="USD">USD ($)</option>
         </select>
         <label class="input-label">Finnhub API Key</label>
         <input type="text" id="apiInput" style="width:100%; padding:12px; background:#000; color:white; border-radius:8px; border:1px solid #444; margin-bottom:15px;">
-        <button class="btn btn-green" onclick="saveSettings()">Speichern & Neustarten</button>
+        <button class="btn btn-green" onclick="saveSettings()" style="background:var(--green); width:100%; padding:12px; border:none; border-radius:8px; color:white; font-weight:bold; cursor:pointer;">Speichern</button>
     </div>
 
-    <div class="input-group">
+    <div class="search-container">
         <input type="text" id="searchInput" class="search-input" placeholder="Suche (Apple, Novo, BTC)...">
-        <button onclick="startSearch()" style="background:var(--card); color:var(--blue); border:1px solid #333; padding:0 15px; border-radius:12px; cursor:pointer">🔍</button>
-        <button onclick="openManual()" style="background:var(--card); color:var(--blue); border:1px solid #333; padding:0 15px; border-radius:12px; cursor:pointer">+</button>
+        <button class="search-btn" onclick="startSearch()">🔍</button>
+        <button class="search-btn" onclick="openManual()">+</button>
     </div>
 
-    <div id="selectArea"></div>
+    <div id="selectionArea"></div>
     <div id="assetList"></div>
 
-    <div id="qModal" class="modal">
+    <div id="qModal" class="modal-overlay">
         <div class="modal-box">
-            <h3 id="qTitle" style="margin-top:0">Asset Details</h3>
+            <h3 id="qTitle" style="margin-top:0">Asset hinzufügen</h3>
             <label class="input-label">Menge</label>
-            <input type="number" id="qAmount" class="small-input" style="margin-bottom:15px; font-size:1.1rem; padding:12px;">
-            <label class="input-label">Einstiegskurs (€)</label>
-            <input type="number" id="qBuy" class="small-input" style="margin-bottom:25px; font-size:1.1rem; padding:12px;">
-            <button class="btn btn-green" onclick="confirmQuickAdd()">Portfolio hinzufügen</button>
-            <button class="btn btn-red" onclick="closeModals()" style="margin-top:12px; background:transparent; border:1px solid #555;">Abbrechen</button>
+            <input type="number" id="qAmount" class="small-input" style="margin-bottom:15px;">
+            <label class="input-label">Kaufkurs (€)</label>
+            <input type="number" id="qBuy" class="small-input" style="margin-bottom:25px;">
+            <button class="btn" style="background:var(--green); width:100%; padding:12px; margin-bottom:10px; border:none; border-radius:8px; color:white; font-weight:bold;" onclick="confirmQuickAdd()">Speichern</button>
+            <button class="btn" style="background:transparent; border:1px solid #666; width:100%; padding:10px; border-radius:8px; color:#aaa;" onclick="closeModals()">Abbrechen</button>
         </div>
     </div>
 
-    <div id="mModal" class="modal">
+    <div id="mModal" class="modal-overlay">
         <div class="modal-box">
-            <h3 style="margin-top:0">Manuelles Asset</h3>
-            <input type="text" id="mName" placeholder="Name (z.B. Rolex, Wohnung)" class="small-input" style="margin-bottom:12px; padding:12px;">
-            <select id="mType" class="small-input" style="margin-bottom:12px; padding:12px;">
-                <option value="stock">Aktie</option><option value="etf">ETF</option><option value="crypto">Krypto</option>
-                <option value="comm">Rohstoff</option><option value="estate">Immobilie</option>
-                <option value="cash">Cash</option><option value="art">Kunst</option><option value="manual">Sonstiges</option>
+            <h3 style="margin-top:0">Hinzufügen</h3>
+            <input type="text" id="mName" placeholder="Name" class="small-input" style="margin-bottom:12px;">
+            <select id="mType" class="small-input" style="margin-bottom:12px;">
+                <option value="stock">Aktie</option><option value="etf">ETF</option>
+                <option value="crypto">Krypto</option><option value="comm">Rohstoff</option>
+                <option value="estate">Immobilie</option><option value="cash">Cash</option>
+                <option value="manual">Sonstiges</option>
             </select>
-            <input type="number" id="mPrice" placeholder="Aktueller Wert (€)" class="small-input" style="margin-bottom:12px; padding:12px;">
-            <input type="number" id="mBuy" placeholder="Kaufpreis (€)" class="small-input" style="margin-bottom:20px; padding:12px;">
-            <button class="btn btn-blue" onclick="saveManual()">Speichern</button>
-            <button class="btn btn-red" onclick="closeModals()" style="margin-top:12px; background:transparent; border:1px solid #555;">Abbrechen</button>
+            <input type="number" id="mPrice" placeholder="Aktueller Wert (€)" class="small-input" style="margin-bottom:12px;">
+            <input type="number" id="mBuy" placeholder="Kaufkurs (€)" class="small-input" style="margin-bottom:20px;">
+            <button class="btn" style="background:var(--blue); width:100%; padding:12px; border:none; border-radius:8px; color:white; font-weight:bold;" onclick="saveManual()">Hinzufügen</button>
+            <button class="btn" style="background:transparent; border:1px solid #666; width:100%; padding:10px; border-radius:8px; color:#aaa; margin-top:10px;" onclick="closeModals()">Abbrechen</button>
         </div>
     </div>
 
     <script>
-        // --- CORE STATE ---
-        let assets = [], apiKey = '', currency = 'EUR', stealth = false, prices = {}, eurRate = 1, catState = {}, pending = null;
-
-        // --- ERROR MONITOR ---
+        // --- GLOBAL ERROR HANDLER ---
         window.onerror = function(m, u, l) {
             const e = document.getElementById('errDisplay');
-            e.style.display = 'block';
-            e.innerHTML = "⚠️ Logik-Fehler: " + m + " (Zeile " + l + ")";
+            if(e) { e.style.display = 'block'; e.innerHTML = "⚠️ Fehler: " + m + " (Zeile: " + l + ")"; }
             return false;
         };
 
-        // --- FUNCTIONS ---
-        function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
-
-        function toggleCategory(k) { catState[k] = !catState[k]; renderList(); }
-        
-        function toggleSettings() { 
-            const p = document.getElementById('settingsPanel');
-            p.style.display = p.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function toggleStealth() { 
-            stealth = !stealth; 
-            localStorage.setItem('stealthMode', stealth); 
-            renderList(); 
-        }
-
-        function closeModals() {
-            document.getElementById('qModal').style.display = 'none';
-            document.getElementById('mModal').style.display = 'none';
-            pending = null;
-        }
-
-        function openManual() { document.getElementById('mModal').style.display = 'flex'; }
-
-        function saveManual() {
-            const n = document.getElementById('mName').value;
-            const t = document.getElementById('mType').value;
-            const p = parseFloat(document.getElementById('mPrice').value) || 0;
-            const b = parseFloat(document.getElementById('mBuy').value) || 0;
-            if(!n) return alert('Bitte Name eingeben');
-            assets.push({ id: 'MAN_'+Date.now(), name: n, type: t, amount: 1, manualPrice: p, buyPrice: b, source: 'manual', active: true });
-            save(); catState[t] = true; closeModals(); renderList();
-            document.getElementById('mName').value = '';
-        }
-
-        async function startSearch() {
-            const q = document.getElementById('searchInput').value.trim().toLowerCase();
-            const area = document.getElementById('selectArea');
-            if(!q) return;
-            area.innerHTML = '<div style="color:#888; text-align:center; padding:10px;">Suche läuft...</div>'; area.style.display = 'flex';
-            
-            let results = [];
-            // Lokale Aliase
-            if(q === 'btc' || q === 'bitcoin') results.push({ n: 'Bitcoin', s: 'bitcoin', t: 'crypto' });
-            if(q === 'eth' || q === 'ethereum') results.push({ n: 'Ethereum', s: 'ethereum', t: 'crypto' });
-            if(q === 'novo' || q === 'nordisk') results.push({ n: 'Novo Nordisk', s: 'NVO', t: 'stock' });
-
-            if(apiKey && results.length < 5) {
-                try {
-                    const r = await fetch(`https://finnhub.io/api/v1/search?q=${q}&token=${apiKey}`);
-                    const d = await r.json();
-                    if(d.result) d.result.slice(0,5).forEach(x => {
-                        if(!results.find(o=>o.s===x.symbol)) results.push({ n: x.description, s: x.symbol, t: x.description.includes('ETF') ? 'etf' : 'stock' });
-                    });
-                } catch(e){}
-            }
-
-            if(results.length === 0) { area.innerHTML = '<div style="padding:10px;">Nichts gefunden. Key prüfen?</div>'; return; }
-            area.innerHTML = '';
-            results.forEach(r => {
-                const d = document.createElement('div');
-                d.className = 'select-btn';
-                d.innerHTML = `<div><b>${r.n}</b><br><small style="color:var(--blue)">${r.s}</small></div><small style="opacity:0.6">${r.t.toUpperCase()}</small>`;
-                d.onclick = () => {
-                    pending = r;
-                    document.getElementById('qTitle').innerText = r.n;
-                    document.getElementById('qModal').style.display = 'flex';
-                    area.style.display = 'none';
-                    document.getElementById('searchInput').value = '';
-                };
-                area.appendChild(d);
-            });
-        }
-
-        function confirmQuickAdd() {
-            if(!pending) return;
-            const a = parseFloat(document.getElementById('qAmount').value) || 0;
-            const b = parseFloat(document.getElementById('qBuy').value) || 0;
-            if(assets.find(x => x.id === pending.s)) return alert('Asset bereits vorhanden');
-            assets.push({ id: pending.s, name: pending.n, type: pending.t, amount: a, buyPrice: b, manualPrice: 0, source: 'api', active: true });
-            save(); catState[pending.t] = true; closeModals(); renderList(); refreshPrices();
-        }
-
-        async function refreshPrices() {
-            if(assets.length === 0) return;
-            try {
-                const r = await fetch('https
+        // --- STATE ---
+        let assets = [], apiKey = '', currency = 'EUR', stealth = false, prices = {}, eurRate = 1
