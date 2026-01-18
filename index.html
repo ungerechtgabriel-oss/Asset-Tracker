@@ -5,7 +5,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#000000">
     <link rel="manifest" href="manifest.json">
-    <title>Asset Tracker v51</title>
+    <title>Assets</title>
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGZpbGw9IiMwMDAwMDAiIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjI1NiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0yNTYsOTBjLTQwLDAtMTAwLDE2MC0xNDAsMzMwbDQ1LDEwYzMwLTE0MCw2NS0yNjAsOTUtMjYwczY1LDEyMCw5NSwyNjBsNDUtMTBDMzU2LDI1MCwyOTYsOTAsMjU2LDkweiBNMTc1LDM1MGMzMC0yMCw4MS0zMCwxNjItMjBsLTUsNDBjLTcwLTEwLTEyMC01LTE1MiwxMEwxNzUsMzUweiIvPjwvc3ZnPg==">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48Y2lyY2xlIGZpbGw9IiMwMDAwMDAiIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjI1NiIvPjxwYXRoIGZpbGw9IiNmZmZmZmYiIGQ9Ik0yNTYsOTBjLTQwLDAtMTAwLDE2MC0xNDAsMzMwbDQ1LDEwYzMwLTE0MCw2NS0yNjAsOTUtMjYwczY1LDEyMCw5NSwyNjBsNDUtMTBDMzU2LDI1MCwyOTYsOTAsMjU2LDkweiBNMTc1LDM1MGMzMC0yMCw4MS0zMCwxNjItMjBsLTUsNDBjLTcwLTEwLTEyMC01LTE1MiwxMEwxNzUsMzUweiIvPjwvc3ZnPg==">
+
     <style>
         :root {
             --bg: #000000; --card: #1c1c1e; --text: #ffffff;
@@ -27,6 +31,35 @@
         .legend-item { display: flex; justify-content: space-between; align-items: center; }
         .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 
+        /* Category Header Styles (Accordion) */
+        .cat-group { margin-bottom: 12px; }
+        .cat-header { background: #2c2c2e; padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #333; transition: background 0.2s; }
+        .cat-header:active { background: #3a3a3c; }
+        .cat-title { font-weight: bold; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+        .cat-total { font-weight: 600; color: #ccc; }
+        .cat-content { margin-top: 5px; padding-left: 10px; border-left: 2px solid #333; display: none; }
+        .cat-arrow { font-size: 0.8rem; transition: transform 0.3s; color:#666; }
+        .cat-open .cat-arrow { transform: rotate(90deg); }
+
+        /* Asset Card Styles (Modified for list) */
+        .asset-card { background: var(--card); padding: 16px; border-radius: 12px; margin-bottom: 8px; margin-top: 8px; transition: opacity 0.3s; }
+        .asset-card.inactive { opacity: 0.5; }
+        .row { display: flex; justify-content: space-between; align-items: center; }
+        .asset-info { display: flex; align-items: center; gap: 10px; }
+        .checkbox { width: 24px; height: 24px; accent-color: var(--blue); }
+        .name { font-weight: bold; font-size: 1.1rem; display: block; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+        
+        .val { font-size: 1.1rem; font-weight: 600; }
+        .sub { font-size: 0.85rem; color: #888; display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+        .pnl-tag { font-size: 0.75rem; font-weight: bold; }
+        
+        .controls { margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; }
+        .input-wrapper { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+        .input-label { font-size: 0.75rem; color: #888; font-weight: 500; margin-left: 2px; }
+        .small-input { background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; text-align: right; font-size:16px; width: 100%; box-sizing: border-box; }
+        .del-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 5px; height: 40px; display: flex; align-items: center; }
+        
         /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 200; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-box { background: #2c2c2e; width: 90%; max-width: 350px; padding: 20px; border-radius: 16px; border: 1px solid #444; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -52,37 +85,18 @@
         .select-btn:active { background: #333; }
         .tag { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: bold; }
 
-        .asset-card { background: var(--card); padding: 16px; border-radius: 16px; margin-bottom: 12px; transition: opacity 0.3s; }
-        .asset-card.inactive { opacity: 0.5; }
-        .row { display: flex; justify-content: space-between; align-items: center; }
-        .asset-info { display: flex; align-items: center; gap: 10px; }
-        .checkbox { width: 24px; height: 24px; accent-color: var(--blue); }
-        .name { font-weight: bold; font-size: 1.1rem; display: block; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
-        
-        .val { font-size: 1.1rem; font-weight: 600; }
-        .sub { font-size: 0.85rem; color: #888; display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
-        .pnl-tag { font-size: 0.75rem; font-weight: bold; }
-        
-        .controls { margin-top: 12px; padding-top: 10px; border-top: 1px solid #333; display: flex; gap: 10px; align-items: flex-end; }
-        
-        /* New Input Wrapper Styles */
-        .input-wrapper { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-        .input-label { font-size: 0.75rem; color: #888; font-weight: 500; margin-left: 2px; }
-        .small-input { background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; text-align: right; font-size:16px; width: 100%; box-sizing: border-box; }
-        
-        .del-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; padding: 5px; height: 40px; display: flex; align-items: center; }
-        
         .loading { text-align: center; color: var(--blue); margin-top: 20px; display: none; }
         .blur { filter: blur(8px); }
         .text-green { color: var(--green); }
         .text-red { color: var(--red); }
         
         #errBox { background: #500; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid red; font-size: 0.9rem; position:relative; z-index:1000; }
-        #emergencyBtn { position: fixed; bottom: 10px; right: 10px; background: rgba(255,0,0,0.5); color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.7rem; z-index: 9999; border: 1px solid red; cursor: pointer; }
+        #emergencyBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.3; background: #333; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.6rem; z-index: 9999; border: 1px solid #555; cursor: pointer; }
+        #emergencyBtn:hover { opacity: 1; background: red; }
     </style></head><body>
+    
     <div id="errBox"></div>
-    <div id="emergencyBtn" onclick="hardReset()">Notfall Reset</div>
+    <div id="emergencyBtn" onclick="if(confirm('Notfall Reset?')){localStorage.clear(); location.reload();}">RESET</div>
     
     <div id="manualModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
@@ -203,6 +217,7 @@
     let stealth = false;
     let prices = {};
     let eurRate = 1;
+    let categoryState = {}; // Speichert welche Tabs offen sind
 
     try {
         let saved = localStorage.getItem('ultimateAssets');
@@ -354,6 +369,7 @@
         renderList();
     }
 
+    // --- NEW: CLUSTERED LIST RENDERING ---
     function renderList() {
         const list = document.getElementById('assetList');
         if(!list) return;
@@ -361,162 +377,69 @@
         
         let totalVal = 0;
         let totalInvest = 0;
-        let stats = { stock: 0, etf: 0, crypto: 0, comm: 0, estate: 0, cash: 0, art: 0, manual: 0 };
         
+        // Define Categories and Order
+        const categories = [
+            { key: 'stock', label: 'Aktien', color: 'var(--blue)' },
+            { key: 'etf', label: 'ETFs', color: 'var(--purple)' },
+            { key: 'crypto', label: 'Krypto', color: 'var(--orange)' },
+            { key: 'comm', label: 'Rohstoffe', color: 'var(--green)' },
+            { key: 'estate', label: 'Immobilien', color: 'var(--brown)' },
+            { key: 'cash', label: 'Cash', color: 'var(--teal)' },
+            { key: 'art', label: 'Kunst', color: 'var(--pink)' },
+            { key: 'manual', label: 'Sonstiges', color: 'var(--grey)' }
+        ];
+
+        let stats = {}; 
+        categories.forEach(c => stats[c.key] = 0); // Init Stats
+
         const isUsdView = currency === 'USD';
         const displaySym = isUsdView ? '$' : '€';
 
-        assets.forEach((a, i) => {
+        // 1. Prepare Data
+        let groupedAssets = {};
+        assets.forEach((a, index) => {
+            a.originalIndex = index; // Keep reference to modify
+            
+            // Calculate Values
             let priceInEur = 0;
             let rawPrice = (prices[a.id] || 0);
-
             if(a.source === 'manual') {
-                priceInEur = a.manualPrice || 0; 
-                rawPrice = a.manualPrice || 0;
+                priceInEur = a.manualPrice || 0; rawPrice = a.manualPrice || 0;
             } else {
                 priceInEur = rawPrice * eurRate;
             }
-
             let buyPriceInEur = a.buyPrice || 0;
             let valInEur = (a.amount || 0) * priceInEur;
             let investInEur = (a.amount || 0) * buyPriceInEur;
             let profitInEur = valInEur - investInEur;
             let profitPercent = (investInEur > 0) ? (profitInEur / investInEur * 100) : 0;
-
             let displayVal = isUsdView ? (valInEur / eurRate) : valInEur;
             let displayPrice = isUsdView ? (priceInEur / eurRate) : priceInEur;
-            
+
             if (a.active) {
                 totalVal += displayVal;
                 totalInvest += isUsdView ? (investInEur / eurRate) : investInEur;
-                if(stats[a.type] !== undefined) stats[a.type] += displayVal;
-                else stats['manual'] += displayVal; 
+                
+                // Add to stats if category exists, else 'manual'
+                let catKey = categories.find(c => c.key === a.type) ? a.type : 'manual';
+                stats[catKey] += displayVal;
             }
 
-            let priceStr = displayPrice.toLocaleString(undefined,{maximumFractionDigits:2}) + " " + displaySym;
-            if (rawPrice === 0 && a.source !== 'manual') {
-                if(!apiKey && (a.type === 'stock' || a.type === 'etf')) priceStr = "Key fehlt!";
-                else priceStr = "Lade...";
-            }
-
-            let pnlClass = profitInEur >= 0 ? 'text-green' : 'text-red';
-            let pnlSign = profitInEur >= 0 ? '+' : '';
-            let pnlStr = (a.buyPrice > 0 && rawPrice > 0) ? `<span class="pnl-tag ${pnlClass}">${pnlSign}${profitPercent.toFixed(1)}%</span>` : '';
-
-            let colorVar = 'blue'; let txt = 'AKTIE';
-            if(a.type==='etf') { colorVar='purple'; txt='ETF'; }
-            if(a.type==='crypto') { colorVar='orange'; txt='KRYPTO'; }
-            if(a.type==='comm') { colorVar='green'; txt='ROHSTOFF'; }
-            if(a.type==='estate') { colorVar='brown'; txt='IMMO'; }
-            if(a.type==='cash') { colorVar='teal'; txt='CASH'; }
-            if(a.type==='art') { colorVar='pink'; txt='KUNST'; }
-            if(a.type==='manual') { colorVar='grey'; txt='SONSTIGES'; }
-
-            const blur = stealth ? 'blur' : '';
-            
-            list.innerHTML += `
-            <div class="asset-card ${a.active?'':'inactive'}">
-                <div class="row">
-                    <div class="asset-info">
-                        <input type="checkbox" class="checkbox" ${a.active?'checked':''} onchange="toggleActive(${i})">
-                        <div>
-                            <span class="name">${a.name}</span>
-                            <span class="badge" style="background:var(--${colorVar})33; color:var(--${colorVar})">${txt}</span>
-                        </div>
-                    </div>
-                    <div style="text-align:right">
-                        <div class="val ${blur}">${displaySym}${displayVal.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-                        <div class="sub">${priceStr} ${pnlStr}</div>
-                    </div>
-                </div>
-                <div class="controls">
-                    <div class="input-wrapper">
-                        <span class="input-label">Menge</span>
-                        <input type="number" class="small-input" value="${a.amount}" onchange="updateAmount(${i}, this.value)">
-                    </div>
-                    <div class="input-wrapper">
-                        <span class="input-label">Einstiegskurs (€)</span>
-                        <input type="number" class="small-input" value="${a.buyPrice}" onchange="updateBuyPrice(${i}, this.value)">
-                    </div>
-                    ${a.source==='manual' ? `
-                    <div class="input-wrapper">
-                        <span class="input-label">Aktueller Preis (€)</span>
-                        <input type="number" class="small-input" value="${a.manualPrice}" onchange="updatePrice(${i}, this.value)">
-                    </div>` : ''}
-                    <button class="del-btn" onclick="removeAsset(${i})">🗑️</button>
-                </div>
-            </div>`;
+            // Store formatted data for rendering
+            if(!groupedAssets[a.type]) groupedAssets[a.type] = [];
+            groupedAssets[a.type].push({
+                a, index, displayVal, displayPrice, profitInEur, profitPercent, rawPrice, displaySym, priceStr: 
+                (rawPrice === 0 && a.source !== 'manual' && !apiKey) ? "Key fehlt!" :
+                (rawPrice === 0 && a.source !== 'manual') ? "Lade..." :
+                displayPrice.toLocaleString(undefined,{maximumFractionDigits:2}) + " " + displaySym
+            });
         });
 
-        const tEl = document.getElementById('totalDisplay');
-        const pEl = document.getElementById('totalPnl');
-        tEl.innerText = displaySym + totalVal.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
-        
-        let globalProfit = totalVal - totalInvest;
-        let globalProfitP = (totalInvest > 0) ? (globalProfit / totalInvest * 100) : 0;
-        let gpSign = globalProfit >= 0 ? '+' : '';
-        let gpClass = globalProfit >= 0 ? 'text-green' : 'text-red';
-        
-        if (totalInvest > 0) {
-            pEl.innerHTML = `<span class="${gpClass}">${gpSign}${globalProfit.toLocaleString(undefined,{maximumFractionDigits:2})} ${displaySym} (${gpSign}${globalProfitP.toFixed(2)}%)</span>`;
-        } else {
-            pEl.innerHTML = '<span style="color:#666">Keine Kaufdaten</span>';
-        }
+        // 2. Render Categories
+        categories.forEach(cat => {
+            const catAssets = groupedAssets[cat.key] || [];
+            if(catAssets.length === 0) return; // Skip empty
 
-        if(stealth) { tEl.classList.add('blur'); pEl.classList.add('blur'); } 
-        else { tEl.classList.remove('blur'); pEl.classList.remove('blur'); }
-
-        renderChart(stats, totalVal);
-    }
-
-    function renderChart(stats, total) {
-        const cont = document.getElementById('chartContainer');
-        if(total <= 0) { cont.style.display = 'none'; return; }
-        
-        cont.style.display = 'flex';
-        const chart = document.getElementById('donutChart');
-        const legend = document.getElementById('chartLegend');
-        legend.innerHTML = '';
-
-        const colors = { 
-            stock: 'var(--blue)', etf: 'var(--purple)', crypto: 'var(--orange)', comm: 'var(--green)', 
-            estate: 'var(--brown)', cash: 'var(--teal)', art: 'var(--pink)', manual: 'var(--grey)' 
-        };
-        const labels = { 
-            stock: 'Aktien', etf: 'ETFs', crypto: 'Krypto', comm: 'Rohstoffe', 
-            estate: 'Immobilien', cash: 'Cash', art: 'Kunst/Uhr', manual: 'Sonstiges' 
-        };
-        
-        let gradients = [];
-        let start = 0;
-
-        for(let type in stats) {
-            let val = stats[type];
-            if(val > 0) {
-                let p = (val / total) * 100;
-                let end = start + p;
-                gradients.push(`${colors[type]} ${start}% ${end}%`);
-                start = end;
-
-                legend.innerHTML += `
-                <div class="legend-item">
-                    <div><span class="dot" style="background:${colors[type]}"></span>${labels[type]}</div>
-                    <div style="font-weight:bold">${Math.round(p)}%</div>
-                </div>`;
-            }
-        }
-        chart.style.background = `conic-gradient(${gradients.join(', ')})`;
-    }
-
-    function updateAmount(i, v) { assets[i].amount = parseFloat(v) || 0; save(); renderList(); }
-    function updateBuyPrice(i, v) { assets[i].buyPrice = parseFloat(v) || 0; save(); renderList(); }
-    function updatePrice(i, v) { assets[i].manualPrice = parseFloat(v) || 0; save(); renderList(); }
-    function toggleActive(i) { assets[i].active = !assets[i].active; save(); renderList(); }
-    function removeAsset(i) { if(confirm('Löschen?')) { assets.splice(i, 1); save(); renderList(); } }
-    function toggleStealth() { stealth = !stealth; localStorage.setItem('stealthMode', stealth); renderList(); }
-    function toggleSettings() { const el = document.getElementById('settingsPanel'); el.style.display = el.style.display==='block'?'none':'block'; }
-    function saveSettings() { apiKey = document.getElementById('apiKeyInput').value.trim(); currency = document.getElementById('currencySelector').value; localStorage.setItem('finnhubKey', apiKey); localStorage.setItem('appCurrency', currency); checkApiStatus(); alert('Gespeichert'); refreshPrices(); toggleSettings(); }
-    function hardReset() { if(confirm('Alles löschen?')) { localStorage.clear(); location.reload(); } }
-    function save() { localStorage.setItem('ultimateAssets', JSON.stringify(assets)); }
-    function copyBackup() { document.getElementById('backupOutput').value = JSON.stringify({assets, apiKey, currency}); document.getElementById('backupOutput').select(); document.execCommand('copy'); alert('Kopiert'); }
-    function importBackup() { try { const d = JSON.parse(document.getElementById('importInput').value); if(d.assets) { assets=d.assets; apiKey=d.apiKey; currency=d.currency; save(); location.reload(); } } catch(e){ alert('Fehler'); } }</script></body></html>
+            const catTotal = stats[cat.key];
+            const isOpen = categoryState[cat.key]
