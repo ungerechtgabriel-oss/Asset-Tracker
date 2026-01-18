@@ -79,12 +79,432 @@
         .blur { filter: blur(8px); }
         .text-green { color: var(--green); }
         .text-red { color: var(--red); }
+        
+        /* Notfall & Error */
         #errBox { background: #500; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid red; font-size: 0.9rem; position:relative; z-index:1000; }
-        #emergencyBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.3; background: #333; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.6rem; z-index: 9999; border: 1px solid #555; cursor: pointer; }
-        #emergencyBtn:hover { opacity: 1; background: red; }
+        #emergencyBtn { position: fixed; bottom: 10px; right: 10px; opacity: 0.8; background: #900; color: white; padding: 10px 15px; border-radius: 30px; font-size: 0.7rem; z-index: 99999; border: 2px solid white; cursor: pointer; font-weight:bold; box-shadow: 0 0 10px black; }
     </style></head><body>
     
     <div id="errBox"></div>
-    <div id="emergencyBtn" onclick="if(confirm('Notfall Reset?')){localStorage.clear(); location.reload();}">RESET</div>
+    <div id="emergencyBtn" onclick="if(confirm('Notfall Reset? (Löscht alle Daten)')){localStorage.clear(); location.reload();}">NOTFALL RESET</div>
     
-    <div id="manual
+    <div id="manualModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <button class="close-modal" onclick="closeManual()">✕</button>
+            <h3 class="modal-title">Manuelles Asset</h3>
+            <label>Name</label>
+            <input type="text" id="mName" placeholder="z.B. Wohnung, Rolex">
+            <label>Kategorie</label>
+            <select id="mType">
+                <option value="stock">Aktie</option>
+                <option value="etf">ETF</option>
+                <option value="crypto">Krypto</option>
+                <option value="comm">Rohstoff</option>
+                <option value="estate" selected>Immobilien</option>
+                <option value="cash">Cash / Konto</option>
+                <option value="art">Kunst / Uhr</option>
+                <option value="manual">Sonstiges</option>
+            </select>
+            <label>Aktueller Preis (€)</label>
+            <input type="number" id="mPrice" placeholder="0.00">
+            <label>Ø Kaufpreis (Optional)</label>
+            <input type="number" id="mBuy" placeholder="0.00">
+            <button class="btn btn-blue" onclick="saveManualAsset()">Hinzufügen</button>
+        </div>
+    </div>
+
+    <div id="quantityModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <button class="close-modal" onclick="closeQuantityModal()">✕</button>
+            <h3 class="modal-title" id="qModalTitle">Asset hinzufügen</h3>
+            <label>Menge</label>
+            <input type="number" id="qAmount" placeholder="0" class="small-input" style="text-align:left; margin-bottom:10px;">
+            <label>Einstiegskurs (€)</label>
+            <input type="number" id="qBuy" placeholder="0.00" class="small-input" style="text-align:left; margin-bottom:20px;">
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-red" onclick="closeQuantityModal()">Abbrechen</button>
+                <button class="btn btn-green" onclick="confirmAddAsset()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <header>
+    <div>
+        <div style="font-size:0.8rem; color:#888; font-weight:600;">GESAMTVERMÖGEN <span id="eyeIcon" onclick="toggleStealth()">👁️</span></div>
+        <div class="total-balance" id="totalDisplay">€0.00</div>
+        <div class="total-pnl" id="totalPnl">--</div>
+    </div>
+    <button class="settings-btn" onclick="toggleSettings()">⚙️</button></header>
+    
+    <div class="chart-container" id="chartContainer" style="display:none">
+        <div class="donut" id="donutChart"></div>
+        <div class="legend" id="chartLegend"></div>
+    </div>
+
+    <div id="settingsPanel">
+        <div class="section">
+            <h3>Währung</h3>
+            <select id="currencySelector" onchange="saveSettings()">
+                <option value="EUR">EUR (€)</option>
+                <option value="USD">USD ($)</option>
+            </select>
+        </div>
+        <div class="section">
+            <h3>Finnhub API Key</h3>
+            <div id="apiStatus" class="api-status">Prüfe Status...</div>
+            <input type="text" id="apiKeyInput" placeholder="Key hier einfügen...">
+            <button class="btn btn-green" onclick="saveSettings()">Speichern & Aktualisieren</button>
+        </div>
+        <div class="section">
+            <h3>Backup</h3>
+            <textarea id="backupOutput" rows="2" readonly onclick="this.select()"></textarea>
+            <button class="btn btn-blue" onclick="copyBackup()">Code kopieren</button>
+            <input type="text" id="importInput" placeholder="Code einfügen...">
+            <button class="btn btn-green" onclick="importBackup()">Wiederherstellen</button>
+        </div>
+        <button class="btn btn-red" onclick="hardReset()">⚠️ App zurücksetzen</button>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="searchInput" class="search-input" placeholder="Suche (Apple, Novo, Bitcoin)...">
+        <button class="icon-btn" onclick="startSearch()">🔍</button>
+        <button class="icon-btn" onclick="openManual()">+</button>
+    </div>
+    <div id="selectionArea"></div>
+    <div id="loading" class="loading">Lade Preise...</div>
+    <div id="assetList"></div>
+
+<script>
+    // Global Error Handler
+    window.onerror = function(msg, url, line) {
+        const d = document.getElementById('errBox');
+        d.style.display = 'block';
+        d.innerHTML = `⚠️ Fehler: ${msg} (Z: ${line})`;
+        return false;
+    };
+
+    // DB
+    const TOP_ASSETS = [
+        { n: "Gold (Unze)", s: "tether-gold", t: "comm" }, 
+        { n: "Silber (Unze)", s: "kinesis-silver", t: "comm" },
+        { n: "Kupfer (Index ETF)", s: "CPER", t: "etf" }, 
+        { n: "Öl (Brent ETF)", s: "BNO", t: "etf" },
+        { n: "Öl (WTI ETF)", s: "USO", t: "etf" }, 
+        { n: "Nasdaq 100 ETF", s: "QQQ", t: "etf" },
+        { n: "S&P 500 ETF", s: "IVV", t: "etf" }, 
+        { n: "MSCI World", s: "URTH", t: "etf" },
+        { n: "Vanguard All-World", s: "VT", t: "etf" }, 
+        { n: "DAX ETF", s: "DAX", t: "etf" },
+        { n: "Apple Inc.", s: "AAPL", t: "stock" },
+        { n: "Microsoft", s: "MSFT", t: "stock" },
+        { n: "Amazon", s: "AMZN", t: "stock" },
+        { n: "Alphabet (Google)", s: "GOOGL", t: "stock" },
+        { n: "Nvidia", s: "NVDA", t: "stock" },
+        { n: "Tesla", s: "TSLA", t: "stock" },
+        { n: "Meta (Facebook)", s: "META", t: "stock" },
+        { n: "Netflix", s: "NFLX", t: "stock" },
+        { n: "AMD", s: "AMD", t: "stock" },
+        { n: "Intel", s: "INTC", t: "stock" },
+        { n: "Palantir", s: "PLTR", t: "stock" },
+        { n: "Berkshire Hathaway", s: "BRK.B", t: "stock" },
+        { n: "Coca Cola", s: "KO", t: "stock" },
+        { n: "Pepsi", s: "PEP", t: "stock" },
+        { n: "McDonalds", s: "MCD", t: "stock" },
+        { n: "Visa", s: "V", t: "stock" },
+        { n: "Mastercard", s: "MA", t: "stock" },
+        { n: "Novo Nordisk", s: "NVO", t: "stock" },
+        { n: "LVMH", s: "LVMUY", t: "stock" },
+        { n: "ASML", s: "ASML", t: "stock" },
+        { n: "Linde", s: "LIN", t: "stock" },
+        { n: "SAP", s: "SAP", t: "stock" },
+        { n: "Siemens", s: "SIEGY", t: "stock" },
+        { n: "Airbus", s: "EADSY", t: "stock" },
+        { n: "Allianz", s: "ALIZY", t: "stock" },
+        { n: "Deutsche Telekom", s: "DTEGY", t: "stock" },
+        { n: "BlackRock", s: "BLK", t: "stock" },
+        { n: "Coinbase", s: "COIN", t: "stock" },
+        { n: "JPMorgan", s: "JPM", t: "stock" },
+        { n: "PayPal", s: "PYPL", t: "stock" },
+        { n: "Block (Square)", s: "SQ", t: "stock" }
+    ];
+
+    const CRYPTO_RESOLVER = {
+        'btc': 'bitcoin', 'eth': 'ethereum', 'sol': 'solana', 'dot': 'polkadot',
+        'matic': 'matic-network', 'ada': 'cardano', 'xrp': 'ripple',
+        'bnb': 'binancecoin', 'doge': 'dogecoin', 'link': 'chainlink', 'shib': 'shiba-inu'
+    };
+
+    let assets = [];
+    let apiKey = '';
+    let currency = 'EUR';
+    let stealth = false;
+    let prices = {};
+    let eurRate = 1;
+    let categoryState = {};
+    let pendingAsset = null;
+
+    // --- INIT ---
+    try {
+        let saved = localStorage.getItem('ultimateAssets');
+        assets = saved ? JSON.parse(saved) : [];
+        if(!Array.isArray(assets)) assets = [];
+        assets = assets.filter(a => a && typeof a === 'object');
+        assets.forEach(a => { 
+            if(typeof a.buyPrice === 'undefined' || isNaN(a.buyPrice)) a.buyPrice = 0;
+            if(a.type === 'manual' && !a.source) a.source = 'manual';
+            if(!a.source) a.source = 'api';
+            if(!a.name) a.name = "Unbekannt";
+        });
+        apiKey = localStorage.getItem('finnhubKey') || '';
+        currency = localStorage.getItem('appCurrency') || 'EUR';
+        stealth = localStorage.getItem('stealthMode') === 'true';
+    } catch(e) { console.error(e); assets = []; }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        try {
+            document.getElementById('apiKeyInput').value = apiKey;
+            document.getElementById('currencySelector').value = currency;
+            checkApiStatus();
+            renderList();
+            refreshPrices();
+            setInterval(refreshPrices, 60000);
+            document.getElementById('searchInput').addEventListener("keypress", (e) => { if (e.key === "Enter") startSearch(); });
+        } catch(e) { console.error("DOM ERROR", e); }
+    });
+
+    // --- LOGIC ---
+    function checkApiStatus() {
+        const stat = document.getElementById('apiStatus');
+        if(!apiKey) { stat.innerHTML = "🔴 Kein Key gefunden! (Preise laden nicht)"; stat.className = "api-status status-err"; }
+        else { stat.innerHTML = "🟢 Key vorhanden"; stat.className = "api-status status-ok"; }
+    }
+
+    async function startSearch() {
+        const inp = document.getElementById('searchInput');
+        const area = document.getElementById('selectionArea');
+        const q = inp.value.trim().toLowerCase();
+        
+        if (!q) return;
+        area.innerHTML = ''; area.style.display = 'none';
+        const options = [];
+
+        TOP_ASSETS.forEach(item => {
+            if (item.n.toLowerCase().includes(q) || item.s.toLowerCase() === q) options.push(item);
+        });
+
+        if (CRYPTO_RESOLVER[q]) {
+            options.push({ n: q.toUpperCase(), s: CRYPTO_RESOLVER[q], t: 'crypto' });
+        } else if (Object.values(CRYPTO_RESOLVER).includes(q)) {
+            options.push({ n: q.charAt(0).toUpperCase()+q.slice(1), s: q, t: 'crypto' });
+        }
+
+        if (apiKey && options.length < 3) {
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const res = await fetch(`https://finnhub.io/api/v1/search?q=${q}&token=${apiKey}`);
+                const data = await res.json();
+                if (data.result) {
+                    data.result.slice(0, 5).forEach(r => {
+                        let type = (r.description.includes('ETF') || r.description.includes('TRUST')) ? 'etf' : 'stock';
+                        if (!options.find(o => o.s === r.symbol)) options.push({ n: r.description, s: r.symbol, t: type });
+                    });
+                }
+            } catch(e) {}
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        if (options.length === 0) return alert("Nichts gefunden.");
+
+        area.style.display = 'flex';
+        options.forEach(opt => {
+            const btn = document.createElement('div');
+            btn.className = 'select-btn';
+            let color = 'var(--blue)'; let txt = 'AKTIE';
+            if(opt.t==='etf') { color='var(--purple)'; txt='ETF'; }
+            if(opt.t==='crypto') { color='var(--orange)'; txt='KRYPTO'; }
+            if(opt.t==='comm') { color='var(--green)'; txt='ROHSTOFF'; }
+
+            btn.innerHTML = `<div><strong>${opt.n}</strong><br><span style="font-size:0.7rem; opacity:0.7">${opt.s}</span></div><div class="tag" style="color:${color}; border:1px solid ${color}">${txt}</div>`;
+            
+            // --- NEW: Open Popup instead of direct Add ---
+            btn.onclick = () => { 
+                openQuantityModal(opt.s, opt.t, opt.n, 'api');
+                area.innerHTML = ''; area.style.display = 'none'; inp.value = ''; 
+            };
+            area.appendChild(btn);
+        });
+    }
+
+    // --- MODAL LOGIC ---
+    function openQuantityModal(id, type, name, source) {
+        pendingAsset = { id, type, name, source };
+        document.getElementById('qModalTitle').innerText = name;
+        document.getElementById('qAmount').value = '';
+        document.getElementById('qBuy').value = '';
+        document.getElementById('quantityModal').style.display = 'flex';
+        // Avoid focus crash on some browsers
+        setTimeout(() => document.getElementById('qAmount').focus(), 100);
+    }
+
+    function closeQuantityModal() {
+        document.getElementById('quantityModal').style.display = 'none';
+        pendingAsset = null;
+    }
+
+    function confirmAddAsset() {
+        if(!pendingAsset) return;
+        const amount = parseFloat(document.getElementById('qAmount').value) || 0;
+        const buyPrice = parseFloat(document.getElementById('qBuy').value) || 0;
+        
+        assets.push({ 
+            id: pendingAsset.id, 
+            type: pendingAsset.type, 
+            name: pendingAsset.name, 
+            source: pendingAsset.source, 
+            amount: amount, 
+            buyPrice: buyPrice, 
+            manualPrice: 0, 
+            active: true 
+        });
+        
+        save();
+        
+        // Auto-open category
+        let catKey = ['stock','etf','crypto','comm','estate','cash','art'].includes(pendingAsset.type) ? pendingAsset.type : 'manual';
+        categoryState[catKey] = true;
+        
+        closeQuantityModal();
+        renderList();
+        refreshPrices();
+    }
+
+    function openManual() { document.getElementById('manualModal').style.display = 'flex'; }
+    function closeManual() { document.getElementById('manualModal').style.display = 'none'; }
+    function saveManualAsset() {
+        const name = document.getElementById('mName').value;
+        const type = document.getElementById('mType').value;
+        const price = parseFloat(document.getElementById('mPrice').value) || 0;
+        const buy = parseFloat(document.getElementById('mBuy').value) || 0;
+        if(!name) return alert('Name fehlt');
+        
+        const id = name.replace(/\s+/g, '_').toUpperCase() + '_' + Date.now();
+        assets.push({ id, type, name, source: 'manual', amount: 1, buyPrice: buy, manualPrice: price, active: true });
+        save();
+        categoryState[type] = true;
+        renderList(); 
+        closeManual();
+        document.getElementById('mName').value = ''; document.getElementById('mPrice').value = '';
+    }
+
+    async function refreshPrices() {
+        if (assets.length === 0) return;
+        try {
+            const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=eur');
+            const d = await res.json();
+            if (d && d.tether && d.tether.eur) eurRate = d.tether.eur;
+        } catch(e) {}
+
+        let cgIds = assets.filter(a => (a.type === 'crypto' || a.type === 'comm') && a.source !== 'manual').map(a => a.id);
+        if (cgIds.length > 0) {
+            try {
+                const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cgIds.join(',')}&vs_currencies=usd`);
+                const d = await res.json();
+                for (let k in d) prices[k] = d[k].usd;
+            } catch(e) {}
+        }
+
+        const stocks = assets.filter(a => (a.type === 'stock' || a.type === 'etf') && a.source !== 'manual');
+        if (stocks.length > 0 && apiKey) {
+            for (let s of stocks) {
+                try {
+                    const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.id}&token=${apiKey}`);
+                    const d = await res.json();
+                    if (d.c) prices[s.id] = d.c;
+                    await new Promise(r => setTimeout(r, 200)); 
+                } catch(e) {}
+            }
+        }
+        renderList();
+    }
+
+    window.toggleCategory = function(key) {
+        categoryState[key] = !categoryState[key];
+        renderList();
+    }
+
+    // RENDER
+    function renderList() {
+        const list = document.getElementById('assetList');
+        if(!list) return;
+        
+        let totalVal = 0;
+        let totalInvest = 0;
+        
+        const categories = [
+            { key: 'stock', label: 'Aktien', color: 'var(--blue)' },
+            { key: 'etf', label: 'ETFs', color: 'var(--purple)' },
+            { key: 'crypto', label: 'Krypto', color: 'var(--orange)' },
+            { key: 'comm', label: 'Rohstoffe', color: 'var(--green)' },
+            { key: 'estate', label: 'Immobilien', color: 'var(--brown)' },
+            { key: 'cash', label: 'Cash', color: 'var(--teal)' },
+            { key: 'art', label: 'Kunst', color: 'var(--pink)' },
+            { key: 'manual', label: 'Sonstiges', color: 'var(--grey)' }
+        ];
+
+        let stats = {}; 
+        categories.forEach(c => stats[c.key] = 0);
+        let groupedAssets = {};
+
+        const isUsdView = currency === 'USD';
+        const displaySym = isUsdView ? '$' : '€';
+
+        // 1. Group
+        assets.forEach((a, index) => {
+            let typeKey = categories.some(c => c.key === a.type) ? a.type : 'manual';
+            
+            let priceInEur = 0;
+            let rawPrice = (prices[a.id] || 0);
+            if(a.source === 'manual') {
+                priceInEur = a.manualPrice || 0; rawPrice = a.manualPrice || 0;
+            } else {
+                priceInEur = rawPrice * eurRate;
+            }
+            let valInEur = (a.amount || 0) * priceInEur;
+            let investInEur = (a.amount || 0) * (a.buyPrice || 0);
+            let profitInEur = valInEur - investInEur;
+            let profitPercent = (investInEur > 0) ? (profitInEur / investInEur * 100) : 0;
+            let displayVal = isUsdView ? (valInEur / eurRate) : valInEur;
+            let displayPrice = isUsdView ? (priceInEur / eurRate) : priceInEur;
+
+            if (a.active) {
+                totalVal += displayVal;
+                totalInvest += isUsdView ? (investInEur / eurRate) : investInEur;
+                stats[typeKey] += displayVal;
+            }
+
+            if(!groupedAssets[typeKey]) groupedAssets[typeKey] = [];
+            groupedAssets[typeKey].push({
+                a, index, displayVal, displayPrice, profitInEur, profitPercent, rawPrice, displaySym, 
+                priceStr: (rawPrice === 0 && a.source !== 'manual' && !apiKey) ? "Key fehlt!" :
+                          (rawPrice === 0 && a.source !== 'manual') ? "Lade..." :
+                          displayPrice.toLocaleString(undefined,{maximumFractionDigits:2}) + " " + displaySym
+            });
+        });
+
+        // 2. Build HTML
+        let fullHtml = '';
+        categories.forEach(cat => {
+            const catAssets = groupedAssets[cat.key] || [];
+            if(catAssets.length === 0) return;
+
+            const isOpen = categoryState[cat.key] || false;
+            
+            let itemsHtml = '';
+            catAssets.forEach(item => {
+                const { a, index, displayVal, profitInEur, profitPercent, rawPrice, displaySym, priceStr } = item;
+                let pnlClass = profitInEur >= 0 ? 'text-green' : 'text-red';
+                let pnlSign = profitInEur >= 0 ? '+' : '';
+                let pnlStr = (a.buyPrice > 0 && rawPrice > 0) ? `<span class="pnl-tag ${pnlClass}">${pnlSign}${profitPercent.toFixed(1)}%</span>` : '';
+                const blur = stealth ? 'blur' : '';
+
+                itemsHtml +=
